@@ -1,0 +1,93 @@
+# Intentional HQ — plan going forward
+
+## What this app is
+
+A management home base for everything you run: the scurry Supabase, an ops
+Supabase, every social account, every deployed site, every repo. One calm
+surface, one design language (matching scurry / task-os), no fake data.
+
+## What was wrong with the codex build
+
+- **It was a pitch deck.** "Waitlist 1,284," "Projected MRR $8,420," "Founder
+  stories converting 2.4× better" — all invented, presented as if real. The
+  first thing a real dashboard has to do is tell the truth: nothing is
+  connected yet.
+- **Off-brand.** Deep-green sidebar, coral accent, orbiting-circle countdown
+  motif. Scurry is warm paper, charcoal ink, one amber accent, quiet cards.
+- **Structure served the pitch, not the work.** "Overview / Content /
+  Analytics / Connections" is what you show an investor. The actual jobs are
+  Data, Social, Sites, Actions.
+- **No dark mode.** Task-os has it; HQ must too.
+
+## What this pass changed
+
+- Rebuilt `app/globals.css` on the scurry token set (paper `#f5f5f0`, ink
+  `#2d2d2a`, accent `#F5B800`, muted grays, subtle shadows, dark mode via
+  `prefers-color-scheme`).
+- Rewrote `app/page.tsx` around real sections (Overview / Data / Social /
+  Sites / Actions), with honest empty states and a connection registry that
+  starts at 0-of-12.
+- Removed all invented metrics, bar charts, donuts, and countdown widgets.
+
+## What to build next (in order)
+
+### 1 — Real auth + a real backend
+- Pick one: Supabase (matches task-os) or Cloudflare D1 (matches this app's
+  worker). Recommend Supabase so HQ and scurry share an account model.
+- Add magic-link login. Gate the whole app behind it.
+- Move the `connections` array into a `connections` table.
+
+### 2 — First real connection: scurry Supabase (read-only)
+- OAuth or PAT into the scurry project.
+- Overview shows: today's tasks, overdue count, last sync time.
+- Actions: "Add task" → writes to scurry via a server action.
+- This proves the end-to-end shape before touching any social API.
+
+### 3 — Social, one at a time
+Order by pain of setup, easiest first:
+1. **Bluesky** (AT Protocol, app password, no review).
+2. **LinkedIn** (OAuth, personal + company).
+3. **X** (paid tier — decide if worth it).
+4. **Instagram + Threads** (Meta Graph API, requires app review).
+5. **TikTok** (Content Posting API, requires app review).
+6. **YouTube** (Data API v3).
+
+For each: store token in the DB encrypted; expose a normalized `publish()`
+call and a `metrics()` call. UI never talks to the platform directly.
+
+### 4 — Sites & infra
+- GitHub App install: list repos, open PRs, latest workflow run per repo.
+- Vercel token: list projects, latest deployment status per project.
+- Cloudflare token: Workers + Pages projects, health.
+
+### 5 — Actions surface
+- **Compose**: one post, choose targets, per-channel preview, schedule.
+- **Query**: saved SQL against any connected Supabase.
+- **Deploy**: kick a Vercel/Cloudflare build.
+- **Capture**: add task to scurry from anywhere in HQ.
+
+### 6 — Ambient signal (only after real data flows)
+- Activity feed: new rows in scurry, new posts, new deploys — all in one
+  stream, timestamped, filterable.
+- No vanity metrics. Numbers only when they're queryable.
+
+## Non-goals
+
+- No launch-countdown widget. It's a management app, not a runway.
+- No AI-generated "insight" cards until there's real data to insight-ify.
+- No PowerPoint-style hero visuals. Every card earns its space by
+  representing a real thing the user can act on.
+
+## Visual rules (locked)
+
+- Palette: only the tokens defined in `globals.css`. No new colors without
+  updating both light and dark values.
+- One accent (`--accent`, amber). Green/red only for `pill-live` /
+  `pill-warn` status.
+- Corners: 8px (buttons, small chips), 10-12px (cards).
+- Shadows: `--card-shadow` only. No colored glows.
+- Type: `--font-display` (Manrope) for headings, `--font-body` (DM Sans) for
+  everything else. Sizes: h1 22-28px, h2 15px, h3 13px, body 13px, meta 11px.
+- Density: task-os feels quiet because rows are 10-12px vertical padding, not
+  20. Keep it there.
+- Empty states are a first-class UI, not a placeholder. Use `.empty`.
