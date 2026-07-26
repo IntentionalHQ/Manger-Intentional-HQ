@@ -60,12 +60,18 @@ test("ships the five work surfaces without invented launch metrics", async () =>
 });
 
 test("provides a Supabase magic-link flow for Vercel", async () => {
-  const [login, magicLink, callback] = await Promise.all([
+  const [auth, loginPage, login, magicLink, callback] = await Promise.all([
+    readFile(projectFile("app/chatgpt-auth.ts"), "utf8"),
+    readFile(projectFile("app/login/page.tsx"), "utf8"),
     readFile(projectFile("app/login/login-form.tsx"), "utf8"),
     readFile(projectFile("app/api/auth/magic-link/route.ts"), "utf8"),
     readFile(projectFile("app/auth/callback/route.ts"), "utf8"),
   ]);
 
+  assert.match(auth, /host\.endsWith\("\.vercel\.app"\)/);
+  assert.match(auth, /redirect\(`\/login\?returnTo=/);
+  assert.match(loginPage, /authConfigured/);
+  assert.match(login, /Connect Supabase in Vercel/);
   assert.match(login, /Email me a sign-in link/);
   assert.match(magicLink, /signInWithOtp/);
   assert.match(magicLink, /emailRedirectTo/);

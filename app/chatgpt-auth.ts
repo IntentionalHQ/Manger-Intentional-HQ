@@ -67,7 +67,7 @@ export async function requireChatGPTUser(
   const user = await getChatGPTUser();
   if (user) return user;
 
-  if (getSupabasePublicConfig()) {
+  if (getSupabasePublicConfig() || (await isAppHostedRequest())) {
     redirect(`/login?returnTo=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`);
   }
 
@@ -126,4 +126,19 @@ function safeDecodeURIComponent(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+async function isAppHostedRequest(): Promise<boolean> {
+  if (process.env.VERCEL === "1") return true;
+
+  const requestHeaders = await headers();
+  const host = (
+    requestHeaders.get("x-forwarded-host") ??
+    requestHeaders.get("host") ??
+    ""
+  )
+    .split(":")[0]
+    .toLowerCase();
+
+  return host === "localhost" || host === "127.0.0.1" || host.endsWith(".vercel.app");
 }

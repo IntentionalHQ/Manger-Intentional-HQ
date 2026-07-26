@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getSupabasePublicConfig } from "../../lib/supabase/config";
 import { getChatGPTUser, safeReturnPath } from "../chatgpt-auth";
 import { LoginForm } from "./login-form";
 
@@ -13,6 +14,7 @@ export default async function LoginPage({
   const returnTo = safeReturnPath(params.returnTo ?? "/");
   const user = await getChatGPTUser();
   if (user) redirect(returnTo);
+  const authConfigured = Boolean(getSupabasePublicConfig());
 
   return (
     <main className="login-shell">
@@ -21,9 +23,15 @@ export default async function LoginPage({
         <p className="eyebrow">Intentional HQ</p>
         <h1>Sign in to your home base</h1>
         <p className="subhead">
-          Use the same email as Scurry. We will send you a secure magic link.
+          {authConfigured
+            ? "Use the same email as Scurry. We will send you a secure magic link."
+            : "The deployment is online. Authentication needs one final setup step."}
         </p>
-        <LoginForm returnTo={returnTo} initialError={params.error} />
+        <LoginForm
+          returnTo={returnTo}
+          initialError={params.error}
+          configured={authConfigured}
+        />
       </section>
     </main>
   );

@@ -472,6 +472,27 @@ h3 { font-size: 13px; font-weight: 600; }
   color: var(--text-secondary);
   font-size: 12px;
 }
+.login-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 14px;
+  border: 1px solid var(--accent-muted);
+  border-radius: 8px;
+  background: var(--accent-subtle);
+}
+.login-setup strong { font-size: 13px; }
+.login-setup p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.login-setup code {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
 
 /* --- Footer ------------------------------------------------------- */
 

@@ -5,9 +5,11 @@ import { FormEvent, useState } from "react";
 export function LoginForm({
   returnTo,
   initialError,
+  configured,
 }: {
   returnTo: string;
   initialError?: string;
+  configured: boolean;
 }) {
   const [message, setMessage] = useState(initialError ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +36,20 @@ export function LoginForm({
       response.ok
         ? payload.message ?? "Check your email."
         : payload.error ?? "The sign-in link could not be sent.",
+    );
+  }
+
+  if (!configured) {
+    return (
+      <div className="login-setup" role="status">
+        <strong>Connect Supabase in Vercel</strong>
+        <p>
+          Add <code>SCURRY_SUPABASE_URL</code>,{" "}
+          <code>SCURRY_SUPABASE_PUBLISHABLE_KEY</code>, and{" "}
+          <code>SCURRY_SUPABASE_SERVICE_ROLE_KEY</code> to the Production
+          environment, then redeploy.
+        </p>
+      </div>
     );
   }
 
