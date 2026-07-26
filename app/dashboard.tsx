@@ -63,7 +63,7 @@ function ConnectionGrid({
             <small>
               {connection.status === "connected"
                 ? formatSyncTime(connection.lastSyncedAt)
-                : connection.detail}
+                : connection.lastError ?? connection.detail}
             </small>
           </div>
           <StatusPill status={connection.status} />
