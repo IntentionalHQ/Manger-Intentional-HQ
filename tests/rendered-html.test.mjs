@@ -35,7 +35,8 @@ test("uses the backend-only Scurry connector for reads and task capture", async 
   assert.match(scurry, /persistSession: false/);
   assert.match(scurry, /client\.auth\.admin\.listUsers/);
   assert.match(scurry, /\.from\("tasks"\)/);
-  assert.doesNotMatch(scurry, /NEXT_PUBLIC_SUPABASE/);
+  assert.match(scurry, /SCURRY_SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(scurry, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(route, /getChatGPTUser\(\)/);
   assert.match(route, /Authentication required/);
   assert.match(route, /addScurryTask\(user\.email/);
@@ -70,4 +71,33 @@ test("provides a Supabase magic-link flow for Vercel", async () => {
   assert.match(magicLink, /emailRedirectTo/);
   assert.match(callback, /exchangeCodeForSession/);
   assert.match(callback, /safeReturnPath/);
+});
+
+test("keeps Bluesky publishing authenticated and server-side", async () => {
+  const [connector, route, dashboard] = await Promise.all([
+    readFile(projectFile("app/bluesky.ts"), "utf8"),
+    readFile(projectFile("app/api/social/bluesky/post/route.ts"), "utf8"),
+    readFile(projectFile("app/dashboard.tsx"), "utf8"),
+  ]);
+
+  assert.match(connector, /import "server-only"/);
+  assert.match(connector, /com\.atproto\.server\.createSession/);
+  assert.match(connector, /com\.atproto\.repo\.createRecord/);
+  assert.match(connector, /app\.bsky\.feed\.post/);
+  assert.match(route, /getChatGPTUser\(\)/);
+  assert.match(route, /publishBlueskyPost/);
+  assert.match(dashboard, /Publish to Bluesky/);
+  assert.doesNotMatch(dashboard, /BLUESKY_APP_PASSWORD/);
+});
+
+test("shows real, filterable Scurry activity", async () => {
+  const [scurry, dashboard] = await Promise.all([
+    readFile(projectFile("app/scurry.ts"), "utf8"),
+    readFile(projectFile("app/dashboard.tsx"), "utf8"),
+  ]);
+
+  assert.match(scurry, /updatedAt: task\.updated_at/);
+  assert.match(dashboard, /activityFilter/);
+  assert.match(dashboard, /Updated/);
+  assert.match(dashboard, /Filter activity/);
 });

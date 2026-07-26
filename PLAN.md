@@ -50,9 +50,10 @@ surface, one design language (matching scurry / task-os), no fake data.
 - Actions: "Add task" → writes to scurry via a server action.
 - This proves the end-to-end shape before touching any social API.
 
-### 3 — Social, one at a time
+### 3 — Social, one at a time — in progress
 Order by pain of setup, easiest first:
-1. **Bluesky** (AT Protocol, app password, no review).
+1. **Bluesky** — connector, connection check, and composer complete; production
+   credentials still required.
 2. **LinkedIn** (OAuth, personal + company).
 3. **X** (paid tier — decide if worth it).
 4. **Instagram + Threads** (Meta Graph API, requires app review).
@@ -73,9 +74,10 @@ call and a `metrics()` call. UI never talks to the platform directly.
 - **Deploy**: kick a Vercel/Cloudflare build.
 - **Capture**: add task to scurry from anywhere in HQ.
 
-### 6 — Ambient signal (only after real data flows)
-- Activity feed: new rows in scurry, new posts, new deploys — all in one
-  stream, timestamped, filterable.
+### 6 — Ambient signal (only after real data flows) — in progress
+- Activity feed now combines real Scurry task updates and connection sync
+  events with source filters. Add post and deployment events as those
+  integrations become live.
 - No vanity metrics. Numbers only when they're queryable.
 
 ## Future: content studio (video editor)

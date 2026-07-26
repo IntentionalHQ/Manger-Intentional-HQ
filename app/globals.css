@@ -410,6 +410,21 @@ h3 { font-size: 13px; font-weight: 600; }
 }
 .form-actions span { color: var(--text-secondary); font-size: 11px; }
 .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+.filter-chips { display: flex; align-items: center; gap: 4px; }
+.filter-chip {
+  padding: 4px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+.filter-chip:hover,
+.filter-chip.active {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
 
 /* --- Authentication --------------------------------------------- */
 

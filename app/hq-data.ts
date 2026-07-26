@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readBlueskySummary, type BlueskySummary } from "./bluesky";
 import { readScurrySummary, type ScurrySummary } from "./scurry";
 
 export type ConnStatus = "connected" | "not_connected" | "error";
@@ -36,12 +37,16 @@ const registry: Array<
 export type DashboardData = {
   connections: Connection[];
   scurry: ScurrySummary;
+  bluesky: BlueskySummary;
 };
 
 export async function getDashboardData(
   ownerEmail: string,
 ): Promise<DashboardData> {
-  const scurry = await readScurrySummary(ownerEmail);
+  const [scurry, bluesky] = await Promise.all([
+    readScurrySummary(ownerEmail),
+    readBlueskySummary(),
+  ]);
   const now = new Date().toISOString();
 
   return {
@@ -65,6 +70,16 @@ export async function getDashboardData(
         };
       }
 
+      if (connection.id === "bluesky") {
+        return {
+          ...connection,
+          detail: bluesky.handle ? `@${bluesky.handle}` : connection.detail,
+          status: bluesky.status,
+          lastSyncedAt: bluesky.lastSyncedAt,
+          lastError: bluesky.error ?? null,
+        };
+      }
+
       return {
         ...connection,
         status: "not_connected",
@@ -73,5 +88,6 @@ export async function getDashboardData(
       };
     }),
     scurry,
+    bluesky,
   };
 }

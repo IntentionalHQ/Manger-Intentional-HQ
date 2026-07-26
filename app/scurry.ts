@@ -22,6 +22,7 @@ export type ScurryTask = {
   priority: ScurryTaskRow["priority"];
   section: ScurryTaskRow["section"];
   flag: boolean;
+  updatedAt: string;
 };
 
 export type ScurrySummary = {
@@ -35,8 +36,13 @@ export type ScurrySummary = {
 };
 
 function getClient(): SupabaseClient {
-  const url = process.env.SCURRY_SUPABASE_URL?.replace(/\/+$/, "");
-  const serviceRoleKey = process.env.SCURRY_SUPABASE_SERVICE_ROLE_KEY;
+  const url = (
+    process.env.SCURRY_SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+  )?.replace(/\/+$/, "");
+  const serviceRoleKey =
+    process.env.SCURRY_SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
     throw new Error("Scurry Supabase is not configured.");
   }
@@ -118,6 +124,7 @@ export async function readScurrySummary(
         priority: task.priority,
         section: task.section,
         flag: task.flag,
+        updatedAt: task.updated_at,
       })),
       todayCount: todayRows.length,
       overdueCount: rows.filter(
