@@ -1,8 +1,9 @@
-# vinext-starter
+# Intentional HQ
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Intentional HQ is the cross-platform management home base for Scurry, social
+accounts, sites, and operational actions. It runs as standard Next.js on
+Vercel and uses [vinext](https://github.com/cloudflare/vinext) for
+Cloudflare/Sites.
 
 ## Prerequisites
 
@@ -16,6 +17,19 @@ npm run dev
 npm run build
 ```
 
+## Runtime configuration
+
+Set these server-side variables in Vercel and Sites:
+
+- `SCURRY_SUPABASE_URL`
+- `SCURRY_SUPABASE_PUBLISHABLE_KEY`
+- `SCURRY_SUPABASE_SERVICE_ROLE_KEY` (secret)
+- `HQ_TIME_ZONE` (for example, `America/New_York`)
+
+Add the deployed Vercel `/auth/callback` URL to the Scurry Supabase Auth
+redirect allowlist. Vercel uses Supabase magic links; the private Sites target
+continues to accept its platform-provided ChatGPT identity.
+
 This starter does not use `wrangler.jsonc`.
 
 ## Included Shape
@@ -23,7 +37,7 @@ This starter does not use `wrangler.jsonc`.
 - edit site code under `app/`
 - `.openai/hosting.json` declares optional Sites D1 and R2 bindings
 - `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
+- `db/schema.ts` retains the optional Sites D1 schema for future persistence
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
 
@@ -88,8 +102,10 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 ## Useful Commands
 
 - `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
+- `npm run build`: create the standard Next.js `.next/` output for Vercel
+- `npm run build:sites`: create the vinext `dist/` output for Cloudflare/Sites
 - `npm test`: build the app and verify the HQ authentication, data, and UI contracts
+- `npm run test:sites`: build the Sites target and run the same contracts
 - `npm run db:generate`: generate Drizzle migrations after schema changes
 
 ## Learn More

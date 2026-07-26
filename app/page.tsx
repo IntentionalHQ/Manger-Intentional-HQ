@@ -1,6 +1,6 @@
 import {
-  chatGPTSignOutPath,
   requireChatGPTUser,
+  signOutPathForUser,
 } from "./chatgpt-auth";
 import { Dashboard } from "./dashboard";
 import { getDashboardData } from "./hq-data";
@@ -17,7 +17,7 @@ export default async function Home() {
       user={{
         displayName: user.displayName,
         email: user.email,
-        signOutPath: chatGPTSignOutPath("/"),
+        signOutPath: signOutPathForUser(user, "/"),
       }}
     />
   );

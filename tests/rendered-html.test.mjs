@@ -4,19 +4,24 @@ import test from "node:test";
 
 const projectFile = (path) => new URL(`../${path}`, import.meta.url);
 
-test("gates the management dashboard and keeps its data server-side", async () => {
-  const [page, data, schema] = await Promise.all([
+test("supports protected dashboard access on Sites and Vercel", async () => {
+  const [page, data, auth, proxy, packageJson] = await Promise.all([
     readFile(projectFile("app/page.tsx"), "utf8"),
     readFile(projectFile("app/hq-data.ts"), "utf8"),
-    readFile(projectFile("db/schema.ts"), "utf8"),
+    readFile(projectFile("app/chatgpt-auth.ts"), "utf8"),
+    readFile(projectFile("lib/supabase/proxy.ts"), "utf8"),
+    readFile(projectFile("package.json"), "utf8"),
   ]);
 
   assert.match(page, /requireChatGPTUser\("\/"\)/);
   assert.match(page, /getDashboardData\(user\.email\)/);
-  assert.match(data, /owner_email/);
   assert.match(data, /readScurrySummary\(ownerEmail\)/);
-  assert.match(schema, /export const connections/);
-  assert.match(schema, /primaryKey\(\{ columns: \[table\.ownerEmail, table\.id\] \}\)/);
+  assert.doesNotMatch(data, /cloudflare:workers|env\.DB/);
+  assert.match(auth, /oai-authenticated-user-email/);
+  assert.match(auth, /supabase\.auth\.getUser\(\)/);
+  assert.match(proxy, /supabase\.auth\.getClaims\(\)/);
+  assert.match(packageJson, /"build": "next build"/);
+  assert.match(packageJson, /"build:sites": "vinext build"/);
 });
 
 test("uses the backend-only Scurry connector for reads and task capture", async () => {
@@ -48,7 +53,21 @@ test("ships the five work surfaces without invented launch metrics", async () =>
   }
   assert.match(dashboard, /<h2>Add a task<\/h2>/);
   assert.match(dashboard, /Add to Scurry/);
-  assert.doesNotMatch(dashboard, /Projected MRR|Waitlist|2\.4×/i);
-  assert.match(layout, /Intentional HQ — Management home base/);
+  assert.doesNotMatch(dashboard, /Projected MRR|Waitlist/i);
+  assert.match(layout, /Intentional HQ .* Management home base/);
   assert.ok(og.size > 100_000);
+});
+
+test("provides a Supabase magic-link flow for Vercel", async () => {
+  const [login, magicLink, callback] = await Promise.all([
+    readFile(projectFile("app/login/login-form.tsx"), "utf8"),
+    readFile(projectFile("app/api/auth/magic-link/route.ts"), "utf8"),
+    readFile(projectFile("app/auth/callback/route.ts"), "utf8"),
+  ]);
+
+  assert.match(login, /Email me a sign-in link/);
+  assert.match(magicLink, /signInWithOtp/);
+  assert.match(magicLink, /emailRedirectTo/);
+  assert.match(callback, /exchangeCodeForSession/);
+  assert.match(callback, /safeReturnPath/);
 });

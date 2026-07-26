@@ -28,8 +28,10 @@ surface, one design language (matching scurry / task-os), no fake data.
   Sites / Actions), with honest empty states and a connection registry that
   starts at 0-of-12.
 - Removed all invented metrics, bar charts, donuts, and countdown widgets.
-- Added the platform-provided ChatGPT sign-in gate and a durable D1
-  `connections` registry.
+- Added the platform-provided ChatGPT sign-in gate for Sites and Supabase
+  magic-link authentication for Vercel.
+- Kept the connection registry cross-platform so the same dashboard can run
+  on Vercel and Cloudflare/Sites.
 - Connected Scurry read-only using its existing Supabase project and the
   signed-in user's matching email.
 - Added one controlled write action: capture a new task into Scurry.
@@ -37,10 +39,10 @@ surface, one design language (matching scurry / task-os), no fake data.
 ## What to build next (in order)
 
 ### 1 — Real auth + a real backend — complete
-- Pick one: Supabase (matches task-os) or Cloudflare D1 (matches this app's
-  worker). Recommend Supabase so HQ and scurry share an account model.
-- Add magic-link login. Gate the whole app behind it.
-- Move the `connections` array into a `connections` table.
+- Supabase magic-link login gates Vercel; Sites uses its owner-only ChatGPT
+  authentication.
+- The fixed connection catalog stays in code while live statuses come from
+  their real services. Move it to a database when connections become editable.
 
 ### 2 — First real connection: scurry Supabase (read-only) — complete
 - OAuth or PAT into the scurry project.

@@ -411,6 +411,53 @@ h3 { font-size: 13px; font-weight: 600; }
 .form-actions span { color: var(--text-secondary); font-size: 11px; }
 .btn:disabled { cursor: not-allowed; opacity: 0.55; }
 
+/* --- Authentication --------------------------------------------- */
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.login-card {
+  width: min(100%, 420px);
+  padding: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  box-shadow: var(--card-shadow);
+}
+.login-card .brand-mark { margin-bottom: 24px; }
+.login-card h1 { margin: 4px 0 8px; }
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.login-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-heavy);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.login-message {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 /* --- Footer ------------------------------------------------------- */
 
 .footer {
