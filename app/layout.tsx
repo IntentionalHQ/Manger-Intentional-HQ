@@ -18,9 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${protocol}://${host}` : "https://intentional-hq.sites.openai.com";
-  const title = "Intentional HQ — Your launch, in one view";
+  const title = "Intentional HQ — Management home base";
   const description =
-    "A calm command center for product signals, brand content, social publishing, and launch momentum.";
+    "One calm surface for Scurry data, social accounts, sites, and operational actions.";
 
   return {
     title,
@@ -29,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       type: "website",
-      images: [{ url: `${origin}/og.png`, width: 1731, height: 877, alt: "Intentional HQ launch dashboard" }],
+      images: [{ url: `${origin}/og.png`, width: 1731, height: 877, alt: "Intentional HQ management dashboard" }],
     },
     twitter: {
       card: "summary_large_image",

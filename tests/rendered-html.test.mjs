@@ -1,91 +1,54 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
+const projectFile = (path) => new URL(`../${path}`, import.meta.url);
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
-}
-
-test("server-renders the starter loading skeleton", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
-});
-
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
+test("gates the management dashboard and keeps its data server-side", async () => {
+  const [page, data, schema] = await Promise.all([
+    readFile(projectFile("app/page.tsx"), "utf8"),
+    readFile(projectFile("app/hq-data.ts"), "utf8"),
+    readFile(projectFile("db/schema.ts"), "utf8"),
   ]);
 
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
+  assert.match(page, /requireChatGPTUser\("\/"\)/);
+  assert.match(page, /getDashboardData\(user\.email\)/);
+  assert.match(data, /owner_email/);
+  assert.match(data, /readScurrySummary\(ownerEmail\)/);
+  assert.match(schema, /export const connections/);
+  assert.match(schema, /primaryKey\(\{ columns: \[table\.ownerEmail, table\.id\] \}\)/);
+});
 
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
-  );
+test("uses the backend-only Scurry connector for reads and task capture", async () => {
+  const [scurry, route] = await Promise.all([
+    readFile(projectFile("app/scurry.ts"), "utf8"),
+    readFile(projectFile("app/api/tasks/route.ts"), "utf8"),
+  ]);
 
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
+  assert.match(scurry, /import "server-only"/);
+  assert.match(scurry, /createClient\(url, serviceRoleKey/);
+  assert.match(scurry, /persistSession: false/);
+  assert.match(scurry, /client\.auth\.admin\.listUsers/);
+  assert.match(scurry, /\.from\("tasks"\)/);
+  assert.doesNotMatch(scurry, /NEXT_PUBLIC_SUPABASE/);
+  assert.match(route, /getChatGPTUser\(\)/);
+  assert.match(route, /Authentication required/);
+  assert.match(route, /addScurryTask\(user\.email/);
+});
 
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+test("ships the five work surfaces without invented launch metrics", async () => {
+  const [dashboard, layout, og] = await Promise.all([
+    readFile(projectFile("app/dashboard.tsx"), "utf8"),
+    readFile(projectFile("app/layout.tsx"), "utf8"),
+    stat(projectFile("public/og.png")),
+  ]);
+
+  for (const label of ["Overview", "Data", "Social", "Sites", "Actions"]) {
+    assert.match(dashboard, new RegExp(`label: "${label}"`));
+  }
+  assert.match(dashboard, /<h2>Add a task<\/h2>/);
+  assert.match(dashboard, /Add to Scurry/);
+  assert.doesNotMatch(dashboard, /Projected MRR|Waitlist|2\.4×/i);
+  assert.match(layout, /Intentional HQ — Management home base/);
+  assert.ok(og.size > 100_000);
 });

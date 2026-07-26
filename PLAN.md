@@ -28,16 +28,21 @@ surface, one design language (matching scurry / task-os), no fake data.
   Sites / Actions), with honest empty states and a connection registry that
   starts at 0-of-12.
 - Removed all invented metrics, bar charts, donuts, and countdown widgets.
+- Added the platform-provided ChatGPT sign-in gate and a durable D1
+  `connections` registry.
+- Connected Scurry read-only using its existing Supabase project and the
+  signed-in user's matching email.
+- Added one controlled write action: capture a new task into Scurry.
 
 ## What to build next (in order)
 
-### 1 — Real auth + a real backend
+### 1 — Real auth + a real backend — complete
 - Pick one: Supabase (matches task-os) or Cloudflare D1 (matches this app's
   worker). Recommend Supabase so HQ and scurry share an account model.
 - Add magic-link login. Gate the whole app behind it.
 - Move the `connections` array into a `connections` table.
 
-### 2 — First real connection: scurry Supabase (read-only)
+### 2 — First real connection: scurry Supabase (read-only) — complete
 - OAuth or PAT into the scurry project.
 - Overview shows: today's tasks, overdue count, last sync time.
 - Actions: "Add task" → writes to scurry via a server action.
@@ -70,6 +75,31 @@ call and a `metrics()` call. UI never talks to the platform directly.
 - Activity feed: new rows in scurry, new posts, new deploys — all in one
   stream, timestamped, filterable.
 - No vanity metrics. Numbers only when they're queryable.
+
+## Future: content studio (video editor)
+
+Not for this pass, but plan the shell to accommodate it. HQ should
+eventually double as a lightweight video editor for making the content
+that gets published through the Social section — so the pipeline is
+capture → edit → schedule → publish → measure, all in one place.
+
+Sketch of what "Studio" would need when we get there:
+- Media library backed by object storage (Supabase Storage or R2) —
+  clips, b-roll, audio beds, brand overlays, thumbnails.
+- Timeline editor: multi-track (video / overlay / captions / audio),
+  trim, split, ordering, transitions. Consider `remotion` (React-based,
+  server-renderable) or a WASM ffmpeg pipeline; skip a full NLE.
+- Auto-captions (Whisper) + burn-in with brand styling.
+- Aspect-ratio presets tied to the target channel (9:16 for TikTok /
+  Reels / Shorts, 1:1 for feed, 16:9 for YouTube). One edit, multiple
+  exports.
+- Thumbnail + cover-frame picker, saved per channel.
+- "Send to Social composer" hand-off — the finished asset lands in the
+  publish queue with the right ratio already picked.
+- Render queue: server-side ffmpeg / Remotion worker, progress + retry.
+
+Slot it in as a sixth nav section (`Studio`) once at least one social
+account is live, so exports have somewhere real to go.
 
 ## Non-goals
 

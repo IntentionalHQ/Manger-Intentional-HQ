@@ -1,6 +1,27 @@
 # Brief for Codex — Intentional HQ
 
-Read this before touching anything in `app/`.
+Read this **and** `PLAN.md` before touching anything in `app/`.
+
+## Start here (order of operations)
+
+1. Read `PLAN.md` end-to-end. It is the roadmap. Do not skip ahead.
+2. Read `app/globals.css` and `app/page.tsx` — that's the current
+   scurry-matched baseline. Do not restyle it, do not "improve" it,
+   do not swap the palette.
+3. Your first real task is **PLAN.md → "What to build next" → Step 1
+   (Real auth + real backend)**, then **Step 2 (scurry Supabase
+   read-only)**. Do those in order. Do not jump to socials, sites,
+   or the video studio until Step 2 renders real data from a real
+   Supabase in the Overview section.
+4. Before every commit, re-check the Rules below and the "Visual rules
+   (locked)" section in `PLAN.md`. If a change violates either, revert
+   it — even if the user asked for it in the moment. Ask first.
+5. When a step is done, update `PLAN.md` to mark it done (strike-through
+   or a `[x]` prefix), and note anything future-you needs to know.
+
+If a required credential (Supabase URL/key, OAuth client, etc.) is not
+in the repo or `.env`, **stop and ask the user for it** — do not stub
+it, do not hardcode a placeholder, do not skip the step.
 
 ## What this app is
 
@@ -46,6 +67,27 @@ work than a fake chart. It is different work, and it is the required work.
 8. **Real integrations before polish.** Do not add a second visual pass
    before there is one working end-to-end connection (recommend scurry
    Supabase first — see PLAN.md step 2).
+
+## `vendor/` folder — hands off
+
+`vendor/` holds third-party reference code. Right now it contains
+`vendor/react-video-editor/` (a shallow clone of designcombo/react-video-editor,
+MIT). Rules:
+
+- **Do not edit anything in `vendor/`.**
+- **Do not import from `vendor/` into `app/`.** It is excluded from
+  `tsconfig.json` and `eslint.config.mjs` on purpose — treat it as
+  read-only reference material.
+- When we're ready to build the Studio section, **copy** the specific
+  files/components we need into a new `app/studio/` route, adapt them
+  to the scurry design tokens in `app/globals.css`, and add whatever
+  npm deps they need to our own `package.json`. Do not add `vendor/`
+  itself to the workspace.
+- Do not run `npm install` inside `vendor/react-video-editor/`, do not
+  add it as a workspace, do not run its dev server, do not delete it.
+
+If you think we should promote a vendored dep into a real one, say so
+and wait for a decision — don't do it silently.
 
 ## When you're unsure
 
