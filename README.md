@@ -26,12 +26,6 @@ Set these server-side variables in Vercel and Sites:
 - `SCURRY_SUPABASE_SERVICE_ROLE_KEY` (secret)
 - `HQ_TIME_ZONE` (for example, `America/New_York`)
 
-To enable the first social publisher, also set:
-
-- `BLUESKY_IDENTIFIER`
-- `BLUESKY_APP_PASSWORD` (secret)
-- `BLUESKY_SERVICE_URL` (defaults to `https://bsky.social`)
-
 Add the deployed Vercel `/auth/callback` URL to the Scurry Supabase Auth
 redirect allowlist. Vercel uses Supabase magic links; the private Sites target
 continues to accept its platform-provided ChatGPT identity.

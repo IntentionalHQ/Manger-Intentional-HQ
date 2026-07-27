@@ -95,21 +95,19 @@ test("provides a Supabase magic-link flow for Vercel", async () => {
   assert.match(callback, /safeReturnPath/);
 });
 
-test("keeps Bluesky publishing authenticated and server-side", async () => {
-  const [connector, route, dashboard] = await Promise.all([
-    readFile(projectFile("app/bluesky.ts"), "utf8"),
-    readFile(projectFile("app/api/social/bluesky/post/route.ts"), "utf8"),
+test("limits the social roadmap to TikTok, YouTube, and Instagram", async () => {
+  const [data, dashboard, env] = await Promise.all([
+    readFile(projectFile("app/hq-data.ts"), "utf8"),
     readFile(projectFile("app/dashboard.tsx"), "utf8"),
+    readFile(projectFile(".env.example"), "utf8"),
   ]);
 
-  assert.match(connector, /import "server-only"/);
-  assert.match(connector, /com\.atproto\.server\.createSession/);
-  assert.match(connector, /com\.atproto\.repo\.createRecord/);
-  assert.match(connector, /app\.bsky\.feed\.post/);
-  assert.match(route, /getHQOwner\(\)/);
-  assert.match(route, /publishBlueskyPost/);
-  assert.match(dashboard, /Publish to Bluesky/);
-  assert.doesNotMatch(dashboard, /BLUESKY_APP_PASSWORD/);
+  for (const channel of ["TikTok", "YouTube", "Instagram"]) {
+    assert.match(data, new RegExp(`name: "${channel}"`));
+  }
+  assert.doesNotMatch(data, /Bluesky|LinkedIn|X \/ Twitter|Threads/);
+  assert.doesNotMatch(dashboard, /Bluesky|Publish to Bluesky/);
+  assert.doesNotMatch(env, /BLUESKY_/);
 });
 
 test("shows real, filterable Scurry activity", async () => {

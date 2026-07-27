@@ -1,6 +1,5 @@
 import "server-only";
 
-import { readBlueskySummary, type BlueskySummary } from "./bluesky";
 import {
   readScurryBusinessSummary,
   readScurrySummary,
@@ -29,12 +28,8 @@ const registry: Array<
   { id: "supabase-scurry", name: "Supabase — Scurry", kind: "data", detail: "Primary Scurry database", mark: "SB" },
   { id: "hq", name: "Intentional HQ", kind: "data", detail: "Cross-platform connection registry", mark: "HQ" },
   { id: "instagram", name: "Instagram", kind: "social", detail: "Requires Meta OAuth and app review", mark: "IG" },
-  { id: "linkedin", name: "LinkedIn", kind: "social", detail: "Requires LinkedIn OAuth app approval", mark: "in" },
   { id: "tiktok", name: "TikTok", kind: "social", detail: "Requires Content Posting API review", mark: "TT" },
-  { id: "x", name: "X / Twitter", kind: "social", detail: "Requires a paid API access decision", mark: "X" },
   { id: "youtube", name: "YouTube", kind: "social", detail: "Requires Google OAuth credentials", mark: "YT" },
-  { id: "threads", name: "Threads", kind: "social", detail: "Requires Meta OAuth and app review", mark: "Th" },
-  { id: "bluesky", name: "Bluesky", kind: "social", detail: "Requires a handle and app password", mark: "Bs" },
   { id: "vercel", name: "Vercel", kind: "site", detail: "Requires a scoped Vercel token", mark: "▲" },
   { id: "cloudflare", name: "Cloudflare", kind: "site", detail: "Requires a scoped Cloudflare API token", mark: "CF" },
   { id: "github", name: "GitHub", kind: "site", detail: "Requires a GitHub App installation", mark: "GH" },
@@ -44,17 +39,15 @@ export type DashboardData = {
   connections: Connection[];
   scurry: ScurrySummary;
   scurryBusiness: ScurryBusinessSummary;
-  bluesky: BlueskySummary;
   vercel: VercelSummary;
 };
 
 export async function getDashboardData(
   ownerEmail: string,
 ): Promise<DashboardData> {
-  const [scurry, scurryBusiness, bluesky, vercel] = await Promise.all([
+  const [scurry, scurryBusiness, vercel] = await Promise.all([
     readScurrySummary(ownerEmail),
     readScurryBusinessSummary(),
-    readBlueskySummary(),
     readVercelSummary(),
   ]);
   const now = new Date().toISOString();
@@ -82,16 +75,6 @@ export async function getDashboardData(
         };
       }
 
-      if (connection.id === "bluesky") {
-        return {
-          ...connection,
-          detail: bluesky.handle ? `@${bluesky.handle}` : connection.detail,
-          status: bluesky.status,
-          lastSyncedAt: bluesky.lastSyncedAt,
-          lastError: bluesky.error ?? null,
-        };
-      }
-
       if (connection.id === "vercel") {
         const latest = vercel.deployments[0];
         return {
@@ -115,7 +98,6 @@ export async function getDashboardData(
     }),
     scurry,
     scurryBusiness,
-    bluesky,
     vercel,
   };
 }

@@ -106,13 +106,11 @@ export function Dashboard({
   const [section, setSection] = useState<Section>("overview");
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
-  const [postSubmitting, setPostSubmitting] = useState(false);
-  const [postMessage, setPostMessage] = useState("");
   const [activityFilter, setActivityFilter] = useState<
     "all" | "scurry" | "connections"
   >("all");
 
-  const { connections, scurry, scurryBusiness, bluesky, vercel } = initialData;
+  const { connections, scurry, scurryBusiness, vercel } = initialData;
   const counts = useMemo(() => {
     const live = connections.filter(
       (connection) => connection.status === "connected",
@@ -132,7 +130,7 @@ export function Dashboard({
   const pageCopy: Record<Section, [string, string]> = {
     overview: ["Owner home base", "Users, product activity, and infrastructure in one view."],
     data: ["Scurry operations", "Account growth, usage, and database health."],
-    social: ["Social accounts", "Every channel in one place."],
+    social: ["Social accounts", "TikTok, YouTube, and Instagram in one place."],
     sites: ["Sites & infrastructure", "Production deployments, repositories, and domains."],
     actions: ["Quick actions", "Write back to connected systems."],
   };
@@ -168,29 +166,6 @@ export function Dashboard({
     }
 
     setFormMessage("Task added to Scurry.");
-    event.currentTarget.reset();
-    window.setTimeout(() => window.location.reload(), 650);
-  }
-
-  async function submitBlueskyPost(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPostSubmitting(true);
-    setPostMessage("");
-    const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/social/bluesky/post", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: form.get("text") }),
-    });
-    const payload = (await response.json()) as { error?: string };
-    setPostSubmitting(false);
-
-    if (!response.ok) {
-      setPostMessage(payload.error ?? "The post could not be published.");
-      return;
-    }
-
-    setPostMessage("Published to Bluesky.");
     event.currentTarget.reset();
     window.setTimeout(() => window.location.reload(), 650);
   }
@@ -714,40 +689,13 @@ export function Dashboard({
               <article className="card">
                 <div className="card-heading">
                   <div><span className="section-kicker">Publish</span><h2>Compose a post</h2></div>
-                  <StatusPill status={bluesky.status} />
+                  <StatusPill status="not_connected" />
                 </div>
-                {bluesky.status === "connected" ? (
-                  <form className="task-form" onSubmit={submitBlueskyPost}>
-                    <label>
-                      Bluesky post
-                      <textarea
-                        name="text"
-                        required
-                        maxLength={300}
-                        placeholder="What do you want to share?"
-                      />
-                    </label>
-                    <div className="form-actions">
-                      <span role="status">{postMessage}</span>
-                      <button
-                        className="btn btn-primary"
-                        disabled={postSubmitting}
-                      >
-                        {postSubmitting ? "Publishing…" : "Publish to Bluesky"}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="empty">
-                    <strong>
-                      {bluesky.status === "error"
-                        ? "Bluesky needs attention."
-                        : "Bluesky is ready for credentials."}
-                    </strong>
-                    {bluesky.error ??
-                      "Add a handle and app password to enable authenticated publishing."}
-                  </div>
-                )}
+                <div className="empty">
+                  <strong>Connect TikTok first.</strong>
+                  Publishing controls will appear after TikTok OAuth and Content
+                  Posting API access are configured.
+                </div>
               </article>
               <article className="card">
                 <div className="card-heading">

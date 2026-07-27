@@ -39,6 +39,8 @@ surface, one design language (matching scurry / task-os), no fake data.
 - Connected the current Vercel project for latest and recent deployment
   status.
 - Added one controlled write action: capture a new task into Scurry.
+- Removed the dormant Bluesky publisher and retired social placeholders. The
+  Social surface now contains only TikTok, YouTube, and Instagram.
 
 ## What to build next (in order)
 
