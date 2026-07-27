@@ -34,6 +34,10 @@ surface, one design language (matching scurry / task-os), no fake data.
   on Vercel and Cloudflare/Sites.
 - Connected Scurry read-only using its existing Supabase project and the
   signed-in user's matching email.
+- Added owner-only aggregate Scurry account, activity, task, and database
+  health reporting without exposing other users' task content.
+- Connected the current Vercel project for latest and recent deployment
+  status.
 - Added one controlled write action: capture a new task into Scurry.
 
 ## What to build next (in order)
@@ -51,28 +55,37 @@ surface, one design language (matching scurry / task-os), no fake data.
 - This proves the end-to-end shape before touching any social API.
 
 ### 3 — Social, one at a time — in progress
-Order by pain of setup, easiest first:
-1. **Bluesky** — connector, connection check, and composer complete; production
-   credentials still required.
-2. **LinkedIn** (OAuth, personal + company).
-3. **X** (paid tier — decide if worth it).
-4. **Instagram + Threads** (Meta Graph API, requires app review).
-5. **TikTok** (Content Posting API, requires app review).
-6. **YouTube** (Data API v3).
+Priority follows the channels that matter most to the brand:
+1. **TikTok** — primary short-form channel. Build OAuth, creator-info checks,
+   Direct Post and draft flows through the Content Posting API, upload progress,
+   publishing status, and post metrics. Production access requires TikTok app
+   review.
+2. **YouTube** — primary durable video channel. Build Google OAuth, resumable
+   uploads, titles/descriptions/tags, thumbnail upload, scheduled publishing,
+   processing status, and video/channel metrics. Public API uploads may require
+   a Google compliance audit.
+3. **Instagram** — secondary channel. Add Reels and feed publishing plus
+   insights after TikTok and YouTube. Use the Instagram API for a professional
+   account and complete Meta app review when production access requires it.
+4. **Threads** — later, if the Meta application work can be reused efficiently.
+5. **LinkedIn** — later, for personal and company updates when professional
+   distribution becomes a priority.
+6. **X** — only if the paid API tier is justified by measurable results.
 
 For each: store token in the DB encrypted; expose a normalized `publish()`
 call and a `metrics()` call. UI never talks to the platform directly.
 
 ### 4 — Sites & infra
 - GitHub App install: list repos, open PRs, latest workflow run per repo.
-- Vercel token: list projects, latest deployment status per project.
+- Vercel token: current project deployment status and recent history are
+  complete; expand to all projects when more sites are added.
 - Cloudflare token: Workers + Pages projects, health.
 
 ### 5 — Actions surface
 - **Compose**: one post, choose targets, per-channel preview, schedule.
 - **Query**: saved SQL against any connected Supabase.
 - **Deploy**: kick a Vercel/Cloudflare build.
-- **Capture**: add task to scurry from anywhere in HQ.
+- **Capture**: add task to scurry from anywhere in HQ — complete.
 
 ### 6 — Ambient signal (only after real data flows) — in progress
 - Activity feed now combines real Scurry task updates and connection sync
