@@ -1,10 +1,10 @@
-import { getChatGPTUser } from "../../../../chatgpt-auth";
+import { getHQOwner } from "../../../../chatgpt-auth";
 import { publishBlueskyPost } from "../../../../bluesky";
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getHQOwner();
   if (!user) {
-    return Response.json({ error: "Authentication required." }, { status: 401 });
+    return Response.json({ error: "Owner access required." }, { status: 403 });
   }
 
   try {

@@ -13,12 +13,15 @@ test("supports protected dashboard access on Sites and Vercel", async () => {
     readFile(projectFile("package.json"), "utf8"),
   ]);
 
-  assert.match(page, /requireChatGPTUser\("\/"\)/);
+  assert.match(page, /requireHQOwner\("\/"\)/);
   assert.match(page, /getDashboardData\(user\.email\)/);
   assert.match(data, /readScurrySummary\(ownerEmail\)/);
+  assert.match(data, /readScurryBusinessSummary\(\)/);
   assert.doesNotMatch(data, /cloudflare:workers|env\.DB/);
   assert.match(auth, /oai-authenticated-user-email/);
   assert.match(auth, /supabase\.auth\.getUser\(\)/);
+  assert.match(auth, /HQ_OWNER_EMAIL/);
+  assert.match(auth, /getHQOwner/);
   assert.match(proxy, /supabase\.auth\.getClaims\(\)/);
   assert.match(packageJson, /"build": "next build"/);
   assert.match(packageJson, /"build:sites": "vinext build"/);
@@ -37,9 +40,12 @@ test("uses the backend-only Scurry connector for reads and task capture", async 
   assert.match(scurry, /\.from\("tasks"\)/);
   assert.match(scurry, /SCURRY_SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(scurry, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(route, /getChatGPTUser\(\)/);
-  assert.match(route, /Authentication required/);
+  assert.match(route, /getHQOwner\(\)/);
+  assert.match(route, /Owner access required/);
   assert.match(route, /addScurryTask\(user\.email/);
+  assert.match(scurry, /readScurryBusinessSummary/);
+  assert.match(scurry, /activeUsers30d/);
+  assert.match(scurry, /databaseLatencyMs/);
 });
 
 test("ships the five work surfaces without invented launch metrics", async () => {
@@ -90,7 +96,7 @@ test("keeps Bluesky publishing authenticated and server-side", async () => {
   assert.match(connector, /com\.atproto\.server\.createSession/);
   assert.match(connector, /com\.atproto\.repo\.createRecord/);
   assert.match(connector, /app\.bsky\.feed\.post/);
-  assert.match(route, /getChatGPTUser\(\)/);
+  assert.match(route, /getHQOwner\(\)/);
   assert.match(route, /publishBlueskyPost/);
   assert.match(dashboard, /Publish to Bluesky/);
   assert.doesNotMatch(dashboard, /BLUESKY_APP_PASSWORD/);
@@ -106,4 +112,23 @@ test("shows real, filterable Scurry activity", async () => {
   assert.match(dashboard, /activityFilter/);
   assert.match(dashboard, /Updated/);
   assert.match(dashboard, /Filter activity/);
+});
+
+test("shows owner metrics and read-only Vercel deployment monitoring", async () => {
+  const [vercel, data, dashboard] = await Promise.all([
+    readFile(projectFile("app/vercel.ts"), "utf8"),
+    readFile(projectFile("app/hq-data.ts"), "utf8"),
+    readFile(projectFile("app/dashboard.tsx"), "utf8"),
+  ]);
+
+  assert.match(vercel, /import "server-only"/);
+  assert.match(vercel, /HQ_VERCEL_TOKEN/);
+  assert.match(vercel, /https:\/\/api\.vercel\.com/);
+  assert.match(vercel, /method:\s*"GET"|fetch\(/);
+  assert.doesNotMatch(vercel, /method:\s*"(POST|PATCH|PUT|DELETE)"/);
+  assert.match(data, /readVercelSummary\(\)/);
+  assert.match(dashboard, /Total Scurry users/);
+  assert.match(dashboard, /Active users/);
+  assert.match(dashboard, /Latest Vercel deployment/);
+  assert.match(dashboard, /Database health/);
 });

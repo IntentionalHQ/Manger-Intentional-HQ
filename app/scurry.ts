@@ -1,5 +1,9 @@
 import "server-only";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type SupabaseClient,
+  type User,
+} from "@supabase/supabase-js";
 
 type ScurryTaskRow = {
   id: string;
@@ -35,6 +39,23 @@ export type ScurrySummary = {
   error?: string;
 };
 
+export type ScurryBusinessSummary = {
+  status: "connected" | "error";
+  totalUsers: number;
+  newUsers7d: number;
+  newUsers30d: number;
+  activeUsers7d: number;
+  activeUsers30d: number;
+  totalTasks: number;
+  openTasks: number;
+  completedTasks: number;
+  tasksCreated7d: number;
+  tasksCreated30d: number;
+  databaseLatencyMs: number;
+  lastCheckedAt: string;
+  error?: string;
+};
+
 function getClient(): SupabaseClient {
   const url = (
     process.env.SCURRY_SUPABASE_URL ??
@@ -55,15 +76,27 @@ function getClient(): SupabaseClient {
   });
 }
 
+async function listAllScurryUsers(client: SupabaseClient): Promise<User[]> {
+  const users: User[] = [];
+  let page = 1;
+
+  while (page) {
+    const { data, error } = await client.auth.admin.listUsers({
+      page,
+      perPage: 1000,
+    });
+    if (error) throw new Error("Scurry account analytics could not be read.");
+    users.push(...data.users);
+    page = data.nextPage ?? 0;
+  }
+
+  return users;
+}
+
 async function resolveScurryUserId(email: string): Promise<string> {
   const client = getClient();
-  const { data, error } = await client.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (error) throw new Error("Scurry account lookup failed.");
-
-  const matchedUser = data.users.find(
+  const users = await listAllScurryUsers(client);
+  const matchedUser = users.find(
     (user) => user.email?.toLowerCase() === email.toLowerCase(),
   );
 
@@ -142,6 +175,126 @@ export async function readScurrySummary(
       openCount: 0,
       lastSyncedAt: new Date().toISOString(),
       error: error instanceof Error ? error.message : "Scurry sync failed.",
+    };
+  }
+}
+
+function cutoffDate(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function atOrAfter(value: string | undefined, cutoff: string): boolean {
+  return Boolean(value && value >= cutoff);
+}
+
+async function taskCount(
+  client: SupabaseClient,
+  filter?: {
+    column: "status" | "created_at";
+    operator: "eq" | "neq" | "gte";
+    value: string;
+  },
+): Promise<number> {
+  let query = client
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .is("deleted_at", null);
+  if (filter?.operator === "eq") {
+    query = query.eq(filter.column, filter.value);
+  } else if (filter?.operator === "neq") {
+    query = query.neq(filter.column, filter.value);
+  } else if (filter?.operator === "gte") {
+    query = query.gte(filter.column, filter.value);
+  }
+
+  const { count, error } = await query;
+  if (error || count === null) {
+    throw new Error("Scurry task analytics could not be read.");
+  }
+  return count;
+}
+
+export async function readScurryBusinessSummary(): Promise<ScurryBusinessSummary> {
+  const startedAt = Date.now();
+  const checkedAt = new Date().toISOString();
+
+  try {
+    const client = getClient();
+    const cutoff7d = cutoffDate(7);
+    const cutoff30d = cutoffDate(30);
+    const [
+      users,
+      totalTasks,
+      openTasks,
+      completedTasks,
+      tasksCreated7d,
+      tasksCreated30d,
+    ] = await Promise.all([
+      listAllScurryUsers(client),
+      taskCount(client),
+      taskCount(client, {
+        column: "status",
+        operator: "neq",
+        value: "done",
+      }),
+      taskCount(client, {
+        column: "status",
+        operator: "eq",
+        value: "done",
+      }),
+      taskCount(client, {
+        column: "created_at",
+        operator: "gte",
+        value: cutoff7d,
+      }),
+      taskCount(client, {
+        column: "created_at",
+        operator: "gte",
+        value: cutoff30d,
+      }),
+    ]);
+
+    return {
+      status: "connected",
+      totalUsers: users.length,
+      newUsers7d: users.filter((user) => atOrAfter(user.created_at, cutoff7d))
+        .length,
+      newUsers30d: users.filter((user) =>
+        atOrAfter(user.created_at, cutoff30d),
+      ).length,
+      activeUsers7d: users.filter((user) =>
+        atOrAfter(user.last_sign_in_at, cutoff7d),
+      ).length,
+      activeUsers30d: users.filter((user) =>
+        atOrAfter(user.last_sign_in_at, cutoff30d),
+      ).length,
+      totalTasks,
+      openTasks,
+      completedTasks,
+      tasksCreated7d,
+      tasksCreated30d,
+      databaseLatencyMs: Date.now() - startedAt,
+      lastCheckedAt: checkedAt,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      totalUsers: 0,
+      newUsers7d: 0,
+      newUsers30d: 0,
+      activeUsers7d: 0,
+      activeUsers30d: 0,
+      totalTasks: 0,
+      openTasks: 0,
+      completedTasks: 0,
+      tasksCreated7d: 0,
+      tasksCreated30d: 0,
+      databaseLatencyMs: Date.now() - startedAt,
+      lastCheckedAt: checkedAt,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Scurry business analytics failed.",
     };
   }
 }

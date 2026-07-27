@@ -40,6 +40,29 @@ function formatSyncTime(value: string | null, verb = "Synced") {
   })}`;
 }
 
+function formatCount(value: number) {
+  return new Intl.NumberFormat().format(value);
+}
+
+function formatDuration(value: number | null) {
+  if (value === null) return "Duration unavailable";
+  if (value < 1000) return `${value} ms`;
+  return `${(value / 1000).toFixed(1)} sec`;
+}
+
+function DeploymentPill({ status }: { status: string }) {
+  const live = status === "ready";
+  const failed = status === "error" || status === "canceled";
+  return (
+    <span
+      className={`pill ${live ? "pill-live" : failed ? "pill-warn" : "pill-neutral"}`}
+    >
+      <span className="pill-dot" />
+      {status.replaceAll("_", " ")}
+    </span>
+  );
+}
+
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length > 1) {
@@ -89,7 +112,7 @@ export function Dashboard({
     "all" | "scurry" | "connections"
   >("all");
 
-  const { connections, scurry, bluesky } = initialData;
+  const { connections, scurry, scurryBusiness, bluesky, vercel } = initialData;
   const counts = useMemo(() => {
     const live = connections.filter(
       (connection) => connection.status === "connected",
@@ -107,13 +130,19 @@ export function Dashboard({
     connections.filter((connection) => connection.kind === kind);
 
   const pageCopy: Record<Section, [string, string]> = {
-    overview: ["Home base", "Real status from the systems you run."],
-    data: ["Data sources", "Scurry and HQ records in one place."],
+    overview: ["Owner home base", "Users, product activity, and infrastructure in one view."],
+    data: ["Scurry operations", "Account growth, usage, and database health."],
     social: ["Social accounts", "Every channel in one place."],
-    sites: ["Sites & infra", "Deployments, repos, and domains."],
+    sites: ["Sites & infrastructure", "Production deployments, repositories, and domains."],
     actions: ["Quick actions", "Write back to connected systems."],
   };
   const [title, subhead] = pageCopy[section];
+  const latestDeployment = vercel.deployments[0];
+  const activeRate30 = scurryBusiness.totalUsers
+    ? Math.round(
+        (scurryBusiness.activeUsers30d / scurryBusiness.totalUsers) * 100,
+      )
+    : 0;
 
   async function submitTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -231,24 +260,107 @@ export function Dashboard({
             <>
               <section className="stat-grid" aria-label="Connection summary">
                 <article className="stat">
-                  <div className="stat-label">Connections live</div>
-                  <div className="stat-value">{counts.live}<span> / {counts.total}</span></div>
-                  <div className="stat-sub">Verified from HQ records</div>
+                  <div className="stat-label">Total Scurry users</div>
+                  <div className="stat-value">
+                    {formatCount(scurryBusiness.totalUsers)}
+                  </div>
+                  <div className="stat-sub">All registered accounts</div>
                 </article>
                 <article className="stat">
-                  <div className="stat-label">Scurry today</div>
-                  <div className="stat-value">{scurry.todayCount}</div>
-                  <div className="stat-sub">Inbox, due, overdue, or flagged</div>
+                  <div className="stat-label">New users</div>
+                  <div className="stat-value">
+                    {formatCount(scurryBusiness.newUsers7d)}
+                  </div>
+                  <div className="stat-sub">Registered in the last 7 days</div>
                 </article>
                 <article className="stat">
-                  <div className="stat-label">Overdue</div>
-                  <div className="stat-value">{scurry.overdueCount}</div>
-                  <div className="stat-sub">Incomplete tasks before today</div>
+                  <div className="stat-label">Active users</div>
+                  <div className="stat-value">
+                    {formatCount(scurryBusiness.activeUsers30d)}
+                  </div>
+                  <div className="stat-sub">Signed in during the last 30 days</div>
                 </article>
                 <article className="stat">
-                  <div className="stat-label">Open in Scurry</div>
-                  <div className="stat-value">{scurry.openCount}</div>
-                  <div className="stat-sub">{formatSyncTime(scurry.lastSyncedAt)}</div>
+                  <div className="stat-label">Latest deployment</div>
+                  <div className="stat-value stat-state">
+                    {latestDeployment?.status ?? "Not connected"}
+                  </div>
+                  <div className="stat-sub">
+                    {latestDeployment
+                      ? formatSyncTime(latestDeployment.createdAt, "Started")
+                      : vercel.error ?? "Waiting for Vercel"}
+                  </div>
+                </article>
+              </section>
+
+              <section className="grid-2">
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Audience</span>
+                      <h2>Scurry account growth</h2>
+                    </div>
+                    <StatusPill status={scurryBusiness.status} />
+                  </div>
+                  {scurryBusiness.status === "error" ? (
+                    <div className="empty">
+                      <strong>Account analytics need attention.</strong>
+                      {scurryBusiness.error}
+                    </div>
+                  ) : (
+                    <div className="metric-list">
+                      <div className="metric-row">
+                        <span>New accounts, 7 days</span>
+                        <strong>{formatCount(scurryBusiness.newUsers7d)}</strong>
+                      </div>
+                      <div className="metric-row">
+                        <span>New accounts, 30 days</span>
+                        <strong>{formatCount(scurryBusiness.newUsers30d)}</strong>
+                      </div>
+                      <div className="metric-row">
+                        <span>Active users, 7 days</span>
+                        <strong>{formatCount(scurryBusiness.activeUsers7d)}</strong>
+                      </div>
+                      <div className="metric-row">
+                        <span>Active users, 30 days</span>
+                        <strong>{formatCount(scurryBusiness.activeUsers30d)}</strong>
+                      </div>
+                    </div>
+                  )}
+                </article>
+
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Product activity</span>
+                      <h2>Tasks across Scurry</h2>
+                    </div>
+                    <span className="health-note">
+                      {scurryBusiness.databaseLatencyMs} ms query
+                    </span>
+                  </div>
+                  {scurryBusiness.status === "error" ? (
+                    <div className="empty">Task analytics are unavailable.</div>
+                  ) : (
+                    <div className="metric-list">
+                      <div className="metric-row">
+                        <span>Total tasks</span>
+                        <strong>{formatCount(scurryBusiness.totalTasks)}</strong>
+                      </div>
+                      <div className="metric-row">
+                        <span>Open tasks</span>
+                        <strong>{formatCount(scurryBusiness.openTasks)}</strong>
+                      </div>
+                      <div className="metric-row">
+                        <span>Completed tasks</span>
+                        <strong>{formatCount(scurryBusiness.completedTasks)}</strong>
+                      </div>
+                      <div className="metric-row">
+                        <span>Created in 7 days</span>
+                        <strong>{formatCount(scurryBusiness.tasksCreated7d)}</strong>
+                      </div>
+                    </div>
+                  )}
                 </article>
               </section>
 
@@ -345,12 +457,82 @@ export function Dashboard({
           )}
 
           {section === "data" && (
-            <section className="card">
-              <div className="card-heading">
-                <div><span className="section-kicker">Databases</span><h2>Data sources</h2></div>
-              </div>
-              <ConnectionGrid connections={byKind("data")} />
-            </section>
+            <>
+              <section className="grid-2">
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Supabase</span>
+                      <h2>Database health</h2>
+                    </div>
+                    <StatusPill status={scurryBusiness.status} />
+                  </div>
+                  <div className="metric-list">
+                    <div className="metric-row">
+                      <span>Owner query round trip</span>
+                      <strong>{scurryBusiness.databaseLatencyMs} ms</strong>
+                    </div>
+                    <div className="metric-row">
+                      <span>Last health check</span>
+                      <strong>
+                        {formatSyncTime(scurryBusiness.lastCheckedAt, "Checked")}
+                      </strong>
+                    </div>
+                    <div className="metric-row">
+                      <span>Records counted</span>
+                      <strong>
+                        {formatCount(
+                          scurryBusiness.totalUsers +
+                            scurryBusiness.totalTasks,
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Adoption</span>
+                      <h2>Usage snapshot</h2>
+                    </div>
+                    <span className="health-note">{activeRate30}% active</span>
+                  </div>
+                  <div className="metric-list">
+                    <div className="metric-row">
+                      <span>30-day active users</span>
+                      <strong>
+                        {formatCount(scurryBusiness.activeUsers30d)}
+                        {" / "}
+                        {formatCount(scurryBusiness.totalUsers)}
+                      </strong>
+                    </div>
+                    <div className="metric-row">
+                      <span>Tasks created, 30 days</span>
+                      <strong>
+                        {formatCount(scurryBusiness.tasksCreated30d)}
+                      </strong>
+                    </div>
+                    <div className="metric-row">
+                      <span>Completed tasks</span>
+                      <strong>
+                        {formatCount(scurryBusiness.completedTasks)}
+                      </strong>
+                    </div>
+                  </div>
+                </article>
+              </section>
+
+              <section className="card">
+                <div className="card-heading">
+                  <div>
+                    <span className="section-kicker">Databases</span>
+                    <h2>Data sources</h2>
+                  </div>
+                </div>
+                <ConnectionGrid connections={byKind("data")} />
+              </section>
+            </>
           )}
 
           {section === "social" && (
@@ -363,12 +545,125 @@ export function Dashboard({
           )}
 
           {section === "sites" && (
-            <section className="card">
-              <div className="card-heading">
-                <div><span className="section-kicker">Infrastructure</span><h2>Sites & deployments</h2></div>
-              </div>
-              <ConnectionGrid connections={byKind("site")} />
-            </section>
+            <>
+              <section className="grid-2">
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Production</span>
+                      <h2>Latest Vercel deployment</h2>
+                    </div>
+                    {latestDeployment ? (
+                      <DeploymentPill status={latestDeployment.status} />
+                    ) : (
+                      <StatusPill status={vercel.status} />
+                    )}
+                  </div>
+                  {latestDeployment ? (
+                    <div className="deployment-detail">
+                      <strong>{latestDeployment.commitMessage}</strong>
+                      <p>
+                        {latestDeployment.branch}
+                        {latestDeployment.commitSha
+                          ? ` at ${latestDeployment.commitSha.slice(0, 7)}`
+                          : ""}
+                      </p>
+                      <div className="deployment-meta">
+                        <span>
+                          {formatSyncTime(
+                            latestDeployment.createdAt,
+                            "Started",
+                          )}
+                        </span>
+                        <span>
+                          {formatDuration(latestDeployment.durationMs)}
+                        </span>
+                      </div>
+                      {latestDeployment.url ? (
+                        <a
+                          className="text-link"
+                          href={latestDeployment.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open deployment
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="empty">
+                      <strong>Vercel monitoring needs attention.</strong>
+                      {vercel.error ?? "No deployments were returned."}
+                    </div>
+                  )}
+                </article>
+
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Recent runs</span>
+                      <h2>Deployment reliability</h2>
+                    </div>
+                    <span className="health-note">
+                      {vercel.deployments.length} checked
+                    </span>
+                  </div>
+                  <div className="metric-list">
+                    <div className="metric-row">
+                      <span>Ready</span>
+                      <strong>{vercel.successfulCount}</strong>
+                    </div>
+                    <div className="metric-row">
+                      <span>Failed or canceled</span>
+                      <strong>{vercel.failedCount}</strong>
+                    </div>
+                    <div className="metric-row">
+                      <span>Last checked</span>
+                      <strong>
+                        {formatSyncTime(vercel.lastCheckedAt, "Checked")}
+                      </strong>
+                    </div>
+                  </div>
+                </article>
+              </section>
+
+              {vercel.deployments.length > 0 ? (
+                <section className="card deployment-history">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">History</span>
+                      <h2>Recent Vercel deployments</h2>
+                    </div>
+                  </div>
+                  <div className="row-list">
+                    {vercel.deployments.slice(0, 6).map((deployment) => (
+                      <div className="row" key={deployment.id}>
+                        <span className="row-icon">V</span>
+                        <span>
+                          <strong>{deployment.commitMessage}</strong>
+                          <small>
+                            {deployment.branch}
+                            {" · "}
+                            {formatSyncTime(deployment.createdAt, "Started")}
+                          </small>
+                        </span>
+                        <DeploymentPill status={deployment.status} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              <section className="card">
+                <div className="card-heading">
+                  <div>
+                    <span className="section-kicker">Infrastructure</span>
+                    <h2>Sites and services</h2>
+                  </div>
+                </div>
+                <ConnectionGrid connections={byKind("site")} />
+              </section>
+            </>
           )}
 
           {section === "actions" && (

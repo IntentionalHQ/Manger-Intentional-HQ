@@ -1,7 +1,13 @@
 import "server-only";
 
 import { readBlueskySummary, type BlueskySummary } from "./bluesky";
-import { readScurrySummary, type ScurrySummary } from "./scurry";
+import {
+  readScurryBusinessSummary,
+  readScurrySummary,
+  type ScurryBusinessSummary,
+  type ScurrySummary,
+} from "./scurry";
+import { readVercelSummary, type VercelSummary } from "./vercel";
 
 export type ConnStatus = "connected" | "not_connected" | "error";
 export type ConnectionKind = "data" | "social" | "site";
@@ -37,15 +43,19 @@ const registry: Array<
 export type DashboardData = {
   connections: Connection[];
   scurry: ScurrySummary;
+  scurryBusiness: ScurryBusinessSummary;
   bluesky: BlueskySummary;
+  vercel: VercelSummary;
 };
 
 export async function getDashboardData(
   ownerEmail: string,
 ): Promise<DashboardData> {
-  const [scurry, bluesky] = await Promise.all([
+  const [scurry, scurryBusiness, bluesky, vercel] = await Promise.all([
     readScurrySummary(ownerEmail),
+    readScurryBusinessSummary(),
     readBlueskySummary(),
+    readVercelSummary(),
   ]);
   const now = new Date().toISOString();
 
@@ -54,10 +64,12 @@ export async function getDashboardData(
       if (connection.id === "supabase-scurry") {
         return {
           ...connection,
-          status: scurry.status,
+          status: scurryBusiness.status,
           lastSyncedAt:
-            scurry.status === "connected" ? scurry.lastSyncedAt : null,
-          lastError: scurry.error ?? null,
+            scurryBusiness.status === "connected"
+              ? scurryBusiness.lastCheckedAt
+              : null,
+          lastError: scurryBusiness.error ?? null,
         };
       }
 
@@ -80,6 +92,20 @@ export async function getDashboardData(
         };
       }
 
+      if (connection.id === "vercel") {
+        const latest = vercel.deployments[0];
+        return {
+          ...connection,
+          detail: latest
+            ? `Latest deployment: ${latest.status}`
+            : connection.detail,
+          status: vercel.status,
+          lastSyncedAt:
+            vercel.status === "connected" ? vercel.lastCheckedAt : null,
+          lastError: vercel.error ?? null,
+        };
+      }
+
       return {
         ...connection,
         status: "not_connected",
@@ -88,6 +114,8 @@ export async function getDashboardData(
       };
     }),
     scurry,
+    scurryBusiness,
     bluesky,
+    vercel,
   };
 }

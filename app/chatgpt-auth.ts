@@ -74,6 +74,20 @@ export async function requireChatGPTUser(
   redirect(chatGPTSignInPath(returnTo));
 }
 
+export async function getHQOwner(): Promise<ChatGPTUser | null> {
+  const user = await getChatGPTUser();
+  return user && isHQOwner(user) ? user : null;
+}
+
+export async function requireHQOwner(
+  returnTo: string,
+): Promise<ChatGPTUser> {
+  const user = await requireChatGPTUser(returnTo);
+  if (isHQOwner(user)) return user;
+
+  redirect(`/unauthorized?returnTo=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`);
+}
+
 export function signOutPathForUser(
   user: ChatGPTUser,
   returnTo = "/",
@@ -126,6 +140,15 @@ function safeDecodeURIComponent(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+function isHQOwner(user: ChatGPTUser): boolean {
+  const configuredOwner = process.env.HQ_OWNER_EMAIL?.trim().toLowerCase();
+  if (configuredOwner) return user.email.toLowerCase() === configuredOwner;
+
+  // The connected Sites deployment is owner-only at the hosting layer.
+  // Public Vercel access must always provide the explicit owner allowlist.
+  return user.authProvider === "chatgpt";
 }
 
 async function isAppHostedRequest(): Promise<boolean> {

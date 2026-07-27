@@ -284,6 +284,11 @@ h3 { font-size: 13px; font-weight: 600; }
 }
 .stat-value span { color: var(--text-tertiary); font-size: 16px; font-weight: 500; }
 .stat-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+.stat-state {
+  font-size: 17px;
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
 
 /* --- Two-column layouts ------------------------------------------ */
 
@@ -376,6 +381,61 @@ h3 { font-size: 13px; font-weight: 600; }
 }
 .row strong { display: block; font-weight: 600; }
 .row small { display: block; color: var(--text-tertiary); font-size: 11px; margin-top: 2px; }
+
+/* --- Owner metrics and deployments ------------------------------- */
+
+.metric-list { display: flex; flex-direction: column; }
+.metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 2px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.metric-row:first-child { border-top: 0; }
+.metric-row strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: right;
+}
+.health-note {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.deployment-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.deployment-detail > strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.deployment-detail p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.deployment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.text-link {
+  align-self: flex-start;
+  color: var(--accent-hover);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.text-link:hover { text-decoration: underline; }
+.deployment-history { margin-bottom: 16px; }
 
 /* --- Forms -------------------------------------------------------- */
 
@@ -492,6 +552,11 @@ h3 { font-size: 13px; font-weight: 600; }
 .login-setup code {
   color: var(--text-primary);
   overflow-wrap: anywhere;
+}
+.login-action {
+  width: 100%;
+  margin-top: 24px;
+  text-decoration: none;
 }
 
 /* --- Footer ------------------------------------------------------- */

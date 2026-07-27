@@ -1,5 +1,5 @@
 import {
-  requireChatGPTUser,
+  requireHQOwner,
   signOutPathForUser,
 } from "./chatgpt-auth";
 import { Dashboard } from "./dashboard";
@@ -8,7 +8,7 @@ import { getDashboardData } from "./hq-data";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const user = await requireChatGPTUser("/");
+  const user = await requireHQOwner("/");
   const data = await getDashboardData(user.email);
 
   return (
