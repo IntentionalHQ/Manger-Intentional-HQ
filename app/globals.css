@@ -327,6 +327,7 @@ h3 { font-size: 13px; font-weight: 600; }
 .conn-body strong { display: block; font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .conn-body small { display: block; font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
 .conn-action {
+  text-decoration: none;
   padding: 5px 10px;
   border-radius: 6px;
   font-size: 11px;
@@ -354,6 +355,13 @@ h3 { font-size: 13px; font-weight: 600; }
   background: var(--bg-secondary);
 }
 .empty strong { display: block; color: var(--text-primary); font-size: 14px; margin-bottom: 4px; }
+.empty-action { margin-top: 12px; }
+.compact-empty { padding: 12px; text-align: left; }
+.account-name {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
 
 /* --- Table-ish rows ---------------------------------------------- */
 
@@ -378,6 +386,18 @@ h3 { font-size: 13px; font-weight: 600; }
 }
 .row strong { display: block; font-weight: 600; }
 .row small { display: block; color: var(--text-tertiary); font-size: 11px; margin-top: 2px; }
+.row-link {
+  color: var(--text-primary);
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.row-link:hover { color: var(--accent-hover); }
+.compact-list {
+  margin-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
 
 /* --- Owner metrics and deployments ------------------------------- */
 
@@ -467,6 +487,100 @@ h3 { font-size: 13px; font-weight: 600; }
 }
 .form-actions span { color: var(--text-secondary); font-size: 11px; }
 .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+.channel-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.task-form .check-option {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-heavy);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.task-form .check-option input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.task-form .check-option:has(input:disabled) {
+  color: var(--text-tertiary);
+  opacity: 0.65;
+}
+.task-form .save-option {
+  align-self: end;
+  min-height: 38px;
+  justify-content: center;
+}
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.channel-preview {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+.channel-preview strong {
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.channel-preview p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 5px 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.channel-preview small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.muted-preview {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.query-result {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.upload-status {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.upload-status progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent);
+}
 .filter-chips { display: flex; align-items: center; gap: 4px; }
 .filter-chip {
   padding: 4px 7px;

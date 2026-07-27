@@ -96,10 +96,13 @@ test("provides a Supabase magic-link flow for Vercel", async () => {
 });
 
 test("limits the social roadmap to TikTok, YouTube, and Instagram", async () => {
-  const [data, dashboard, env] = await Promise.all([
+  const [data, dashboard, env, social, store, migration] = await Promise.all([
     readFile(projectFile("app/hq-data.ts"), "utf8"),
     readFile(projectFile("app/dashboard.tsx"), "utf8"),
     readFile(projectFile(".env.example"), "utf8"),
+    readFile(projectFile("app/integrations/social.ts"), "utf8"),
+    readFile(projectFile("app/integrations/store.ts"), "utf8"),
+    readFile(projectFile("supabase/hq_integrations.sql"), "utf8"),
   ]);
 
   for (const channel of ["TikTok", "YouTube", "Instagram"]) {
@@ -108,6 +111,63 @@ test("limits the social roadmap to TikTok, YouTube, and Instagram", async () => 
   assert.doesNotMatch(data, /Bluesky|LinkedIn|X \/ Twitter|Threads/);
   assert.doesNotMatch(dashboard, /Bluesky|Publish to Bluesky/);
   assert.doesNotMatch(env, /BLUESKY_/);
+  assert.match(social, /publishTikTok/);
+  assert.match(social, /publishYouTube/);
+  assert.match(social, /publishInstagram/);
+  assert.match(store, /encryptSecret/);
+  assert.match(store, /hq_scheduled_posts/);
+  assert.match(store, /hq_saved_queries/);
+  assert.match(migration, /hq_connections/);
+  assert.match(migration, /hq_run_readonly_query/);
+  assert.match(dashboard, /Connect account/);
+  assert.match(dashboard, /Direct media URL/);
+  assert.match(dashboard, /YouTube thumbnail URL/);
+  assert.match(dashboard, /Channel previews/);
+  assert.match(dashboard, /Saved query/);
+});
+
+test("keeps OAuth, publishing, uploads, queries, and deploy actions owner-only", async () => {
+  const [connect, callback, publish, upload, query, deploy, scheduled] =
+    await Promise.all([
+      readFile(projectFile("app/api/integrations/[provider]/connect/route.ts"), "utf8"),
+      readFile(projectFile("app/api/integrations/[provider]/callback/route.ts"), "utf8"),
+      readFile(projectFile("app/api/social/publish/route.ts"), "utf8"),
+      readFile(projectFile("app/api/media/upload-url/route.ts"), "utf8"),
+      readFile(projectFile("app/api/query/route.ts"), "utf8"),
+      readFile(projectFile("app/api/deploy/route.ts"), "utf8"),
+      readFile(projectFile("app/api/social/scheduled/run/route.ts"), "utf8"),
+    ]);
+
+  for (const route of [connect, callback, publish, upload, query, deploy, scheduled]) {
+    assert.match(route, /getHQOwner/);
+  }
+  assert.match(callback, /validOauthState/);
+  assert.match(publish, /schedulePost/);
+  assert.match(upload, /createMediaUpload/);
+  assert.match(query, /runReadOnlyQuery/);
+  assert.match(deploy, /allowedHook/);
+  assert.match(scheduled, /HQ_CRON_SECRET/);
+});
+
+test("monitors GitHub, all Vercel projects, and Cloudflare", async () => {
+  const [github, vercel, cloudflare, data, dashboard] = await Promise.all([
+    readFile(projectFile("app/github.ts"), "utf8"),
+    readFile(projectFile("app/vercel.ts"), "utf8"),
+    readFile(projectFile("app/cloudflare.ts"), "utf8"),
+    readFile(projectFile("app/hq-data.ts"), "utf8"),
+    readFile(projectFile("app/dashboard.tsx"), "utf8"),
+  ]);
+
+  assert.match(github, /installation\/repositories/);
+  assert.match(github, /actions\/runs/);
+  assert.match(github, /pulls\?state=open/);
+  assert.match(vercel, /\/v9\/projects/);
+  assert.match(cloudflare, /workers\/scripts/);
+  assert.match(cloudflare, /pages\/projects/);
+  assert.match(data, /readGitHubSummary/);
+  assert.match(data, /readCloudflareSummary/);
+  assert.match(dashboard, /GitHub repositories/);
+  assert.match(dashboard, /Cloudflare projects/);
 });
 
 test("shows real, filterable Scurry activity", async () => {

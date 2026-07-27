@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import type {
   Connection,
   ConnectionKind,
@@ -50,6 +50,15 @@ function formatDuration(value: number | null) {
   return `${(value / 1000).toFixed(1)} sec`;
 }
 
+function mediaHost(value: string) {
+  if (!value) return "No media URL yet";
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return "Complete the media URL";
+  }
+}
+
 function DeploymentPill({ status }: { status: string }) {
   const live = status === "ready";
   const failed = status === "error" || status === "canceled";
@@ -89,7 +98,13 @@ function ConnectionGrid({
                 : connection.lastError ?? connection.detail}
             </small>
           </div>
-          <StatusPill status={connection.status} />
+          {connection.actionHref ? (
+            <a className="conn-action" href={connection.actionHref}>
+              {connection.actionLabel ?? "Connect"}
+            </a>
+          ) : (
+            <StatusPill status={connection.status} />
+          )}
         </div>
       ))}
     </div>
@@ -106,11 +121,37 @@ export function Dashboard({
   const [section, setSection] = useState<Section>("overview");
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
+  const [publishSubmitting, setPublishSubmitting] = useState(false);
+  const [publishMessage, setPublishMessage] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [querySubmitting, setQuerySubmitting] = useState(false);
+  const [queryMessage, setQueryMessage] = useState("");
+  const [queryResult, setQueryResult] = useState("");
+  const [queryDraft, setQueryDraft] = useState("");
+  const [composePreview, setComposePreview] = useState<{
+    caption: string;
+    title: string;
+    mediaUrl: string;
+    targets: string[];
+  }>({ caption: "", title: "", mediaUrl: "", targets: [] });
+  const [deploySubmitting, setDeploySubmitting] = useState(false);
+  const [deployMessage, setDeployMessage] = useState("");
   const [activityFilter, setActivityFilter] = useState<
     "all" | "scurry" | "connections"
   >("all");
 
-  const { connections, scurry, scurryBusiness, vercel } = initialData;
+  const {
+    connections,
+    scurry,
+    scurryBusiness,
+    social,
+    vercel,
+    github,
+    cloudflare,
+    activity,
+    savedQueries,
+  } = initialData;
   const counts = useMemo(() => {
     const live = connections.filter(
       (connection) => connection.status === "connected",
@@ -141,6 +182,9 @@ export function Dashboard({
         (scurryBusiness.activeUsers30d / scurryBusiness.totalUsers) * 100,
       )
     : 0;
+  const connectedSocial = social.filter(
+    (summary) => summary.status === "connected",
+  );
 
   async function submitTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,6 +196,7 @@ export function Dashboard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: form.get("title"),
+        thumbnailUrl: form.get("thumbnailUrl"),
         notes: form.get("notes"),
         dueDate: form.get("dueDate"),
         priority: form.get("priority"),
@@ -168,6 +213,154 @@ export function Dashboard({
     setFormMessage("Task added to Scurry.");
     event.currentTarget.reset();
     window.setTimeout(() => window.location.reload(), 650);
+  }
+
+  async function submitPublish(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPublishSubmitting(true);
+    setPublishMessage("");
+    const form = new FormData(event.currentTarget);
+    const scheduledValue = String(form.get("scheduledAt") ?? "");
+    const response = await fetch("/api/social/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targets: form.getAll("targets"),
+        caption: form.get("caption"),
+        mediaUrl: form.get("mediaUrl"),
+        title: form.get("title"),
+        mode: form.get("mode"),
+        privacy: form.get("privacy"),
+        scheduledAt: scheduledValue
+          ? new Date(scheduledValue).toISOString()
+          : null,
+        mediaType: form.get("mediaType"),
+        shareToFeed: true,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      scheduled?: boolean;
+      results?: Array<{ provider: string; error?: string }>;
+    };
+    setPublishSubmitting(false);
+    if (!response.ok && response.status !== 207) {
+      setPublishMessage(payload.error ?? "Publishing failed.");
+      return;
+    }
+    if (payload.scheduled) {
+      setPublishMessage("Post scheduled.");
+      event.currentTarget.reset();
+      return;
+    }
+    const failures = payload.results?.filter((result) => result.error) ?? [];
+    setPublishMessage(
+      failures.length
+        ? `${failures.length} channel${failures.length === 1 ? "" : "s"} need attention.`
+        : "Post submitted to every selected channel.",
+    );
+  }
+
+  async function uploadMedia(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    setUploadProgress(0);
+    setUploadMessage("Preparing upload…");
+    const response = await fetch("/api/media/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        contentType: file.type || "application/octet-stream",
+      }),
+    });
+    const payload = (await response.json()) as {
+      signedUrl?: string;
+      publicUrl?: string;
+      error?: string;
+    };
+    if (!response.ok || !payload.signedUrl || !payload.publicUrl) {
+      setUploadMessage(payload.error ?? "Upload could not be started.");
+      return;
+    }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", payload.signedUrl as string);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.setRequestHeader("x-upsert", "false");
+        xhr.upload.onprogress = (progress) => {
+          if (progress.lengthComputable) {
+            setUploadProgress(
+              Math.round((progress.loaded / progress.total) * 100),
+            );
+          }
+        };
+        xhr.onload = () =>
+          xhr.status >= 200 && xhr.status < 300
+            ? resolve()
+            : reject(new Error(`Upload returned ${xhr.status}.`));
+        xhr.onerror = () => reject(new Error("The media upload was interrupted."));
+        xhr.send(file);
+      });
+      setComposePreview((current) => ({
+        ...current,
+        mediaUrl: payload.publicUrl as string,
+      }));
+      setUploadProgress(100);
+      setUploadMessage("Media uploaded and ready.");
+    } catch (error) {
+      setUploadMessage(
+        error instanceof Error ? error.message : "Media upload failed.",
+      );
+    }
+  }
+
+  async function submitQuery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setQuerySubmitting(true);
+    setQueryMessage("");
+    setQueryResult("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: form.get("query"),
+        save: form.get("save") === "on",
+        name: form.get("name"),
+      }),
+    });
+    const payload = (await response.json()) as { error?: string; rows?: unknown };
+    setQuerySubmitting(false);
+    if (!response.ok) {
+      setQueryMessage(payload.error ?? "Query failed.");
+      return;
+    }
+    setQueryMessage("Read-only query complete.");
+    setQueryResult(JSON.stringify(payload.rows ?? [], null, 2));
+  }
+
+  async function submitDeploy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeploySubmitting(true);
+    setDeployMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/deploy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: form.get("provider"),
+        project: form.get("project"),
+      }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    setDeploySubmitting(false);
+    setDeployMessage(
+      response.ok
+        ? "Deployment triggered."
+        : payload.error ?? "Deployment could not be triggered.",
+    );
   }
 
   return (
@@ -413,8 +606,32 @@ export function Dashboard({
                         </div>
                       ))}
                     {activityFilter !== "scurry" &&
+                      activity.slice(0, 6).map((event) => (
+                        <div className="row" key={`event-${event.id}`}>
+                          <span className="row-icon">
+                            {event.provider.slice(0, 2).toUpperCase()}
+                          </span>
+                          <span>
+                            <strong>{event.title}</strong>
+                            <small>
+                              {event.detail
+                                ? `${event.detail} · `
+                                : ""}
+                              {formatSyncTime(event.createdAt, "Recorded")}
+                            </small>
+                          </span>
+                          <span className="pill pill-neutral">{event.kind}</span>
+                        </div>
+                      ))}
+                    {activityFilter !== "scurry" &&
                       connections
                         .filter((connection) => connection.lastSyncedAt)
+                        .filter(
+                          (connection) =>
+                            !activity.some(
+                              (event) => event.provider === connection.id,
+                            ),
+                        )
                         .map((connection) => (
                           <div className="row" key={connection.id}>
                             <span className="row-icon">{connection.mark}</span>
@@ -511,12 +728,66 @@ export function Dashboard({
           )}
 
           {section === "social" && (
-            <section className="card">
-              <div className="card-heading">
-                <div><span className="section-kicker">Channels</span><h2>Social accounts</h2></div>
-              </div>
-              <ConnectionGrid connections={byKind("social")} />
-            </section>
+            <>
+              <section className="grid-2">
+                {social.map((summary) => (
+                  <article className="card" key={summary.provider}>
+                    <div className="card-heading">
+                      <div>
+                        <span className="section-kicker">Channel</span>
+                        <h2>
+                          {summary.provider === "tiktok"
+                            ? "TikTok"
+                            : summary.provider === "youtube"
+                              ? "YouTube"
+                              : "Instagram"}
+                        </h2>
+                      </div>
+                      <StatusPill status={summary.status} />
+                    </div>
+                    {summary.status === "connected" ? (
+                      <>
+                        <p className="account-name">
+                          {summary.accountName ?? "Connected account"}
+                        </p>
+                        <div className="metric-list">
+                          {summary.metrics.map((metric) => (
+                            <div className="metric-row" key={metric.label}>
+                              <span>{metric.label}</span>
+                              <strong>
+                                {typeof metric.value === "number"
+                                  ? formatCount(metric.value)
+                                  : metric.value}
+                              </strong>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="empty">
+                        <strong>
+                          {summary.configured
+                            ? "Ready to authorize."
+                            : "Developer setup required."}
+                        </strong>
+                        {summary.error ?? "Connect the account to start syncing."}
+                        {summary.configured ? (
+                          <a className="btn btn-primary empty-action" href={summary.connectPath}>
+                            Connect account
+                          </a>
+                        ) : null}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </section>
+              <section className="card">
+                <div className="card-heading">
+                  <div><span className="section-kicker">Channels</span><h2>Connection registry</h2></div>
+                </div>
+                <ConnectionGrid connections={byKind("social")} />
+              </section>
+            </>
           )}
 
           {section === "sites" && (
@@ -538,7 +809,7 @@ export function Dashboard({
                     <div className="deployment-detail">
                       <strong>{latestDeployment.commitMessage}</strong>
                       <p>
-                        {latestDeployment.branch}
+                        {latestDeployment.projectName} · {latestDeployment.branch}
                         {latestDeployment.commitSha
                           ? ` at ${latestDeployment.commitSha.slice(0, 7)}`
                           : ""}
@@ -629,6 +900,107 @@ export function Dashboard({
                 </section>
               ) : null}
 
+              <section className="grid-2">
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Source control</span>
+                      <h2>GitHub repositories</h2>
+                    </div>
+                    <StatusPill status={github.status} />
+                  </div>
+                  {github.status === "connected" ? (
+                    <>
+                      <div className="metric-list">
+                        <div className="metric-row">
+                          <span>Repositories</span>
+                          <strong>{github.repositories.length}</strong>
+                        </div>
+                        <div className="metric-row">
+                          <span>Open pull requests</span>
+                          <strong>{github.openPullRequests}</strong>
+                        </div>
+                        <div className="metric-row">
+                          <span>Failing workflows</span>
+                          <strong>{github.failingWorkflows}</strong>
+                        </div>
+                      </div>
+                      <div className="row-list compact-list">
+                        {github.repositories.slice(0, 5).map((repository) => (
+                          <div className="row" key={repository.id}>
+                            <span className="row-icon">GH</span>
+                            <span>
+                              <a
+                                className="row-link"
+                                href={repository.url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {repository.fullName}
+                              </a>
+                              <small>{repository.openPullRequests} open PRs</small>
+                            </span>
+                            <span className="pill pill-neutral">
+                              {repository.latestWorkflowStatus}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="empty">
+                      <strong>GitHub App setup required.</strong>
+                      {github.error}
+                    </div>
+                  )}
+                </article>
+
+                <article className="card">
+                  <div className="card-heading">
+                    <div>
+                      <span className="section-kicker">Edge infrastructure</span>
+                      <h2>Cloudflare projects</h2>
+                    </div>
+                    <StatusPill status={cloudflare.status} />
+                  </div>
+                  {cloudflare.status === "connected" ? (
+                    <>
+                      <div className="metric-list">
+                        <div className="metric-row">
+                          <span>Workers</span>
+                          <strong>{cloudflare.workerCount}</strong>
+                        </div>
+                        <div className="metric-row">
+                          <span>Pages projects</span>
+                          <strong>{cloudflare.pagesCount}</strong>
+                        </div>
+                        <div className="metric-row">
+                          <span>Healthy</span>
+                          <strong>{cloudflare.healthyCount}</strong>
+                        </div>
+                      </div>
+                      <div className="row-list compact-list">
+                        {cloudflare.projects.slice(0, 5).map((project) => (
+                          <div className="row" key={`${project.kind}-${project.name}`}>
+                            <span className="row-icon">CF</span>
+                            <span>
+                              <strong>{project.name}</strong>
+                              <small>{project.kind}</small>
+                            </span>
+                            <span className="pill pill-neutral">{project.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="empty">
+                      <strong>Cloudflare setup required.</strong>
+                      {cloudflare.error}
+                    </div>
+                  )}
+                </article>
+              </section>
+
               <section className="card">
                 <div className="card-heading">
                   <div>
@@ -689,25 +1061,246 @@ export function Dashboard({
               <article className="card">
                 <div className="card-heading">
                   <div><span className="section-kicker">Publish</span><h2>Compose a post</h2></div>
-                  <StatusPill status="not_connected" />
+                  <span className="health-note">
+                    {connectedSocial.length} channels ready
+                  </span>
                 </div>
-                <div className="empty">
-                  <strong>Connect TikTok first.</strong>
-                  Publishing controls will appear after TikTok OAuth and Content
-                  Posting API access are configured.
-                </div>
+                <form
+                  className="task-form"
+                  onSubmit={submitPublish}
+                  onInput={(event) => {
+                    const form = new FormData(event.currentTarget);
+                    setComposePreview({
+                      caption: String(form.get("caption") ?? ""),
+                      title: String(form.get("title") ?? ""),
+                      mediaUrl: String(form.get("mediaUrl") ?? ""),
+                      targets: form.getAll("targets").map(String),
+                    });
+                  }}
+                >
+                  <div className="channel-options" aria-label="Publish targets">
+                    {social.map((summary) => (
+                      <label className="check-option" key={summary.provider}>
+                        <input
+                          type="checkbox"
+                          name="targets"
+                          value={summary.provider}
+                          disabled={summary.status !== "connected"}
+                        />
+                        {summary.provider === "tiktok"
+                          ? "TikTok"
+                          : summary.provider === "youtube"
+                            ? "YouTube"
+                            : "Instagram"}
+                      </label>
+                    ))}
+                  </div>
+                  <label>
+                    Caption
+                    <textarea
+                      name="caption"
+                      required
+                      maxLength={2200}
+                      placeholder="Write once, then publish to selected channels."
+                    />
+                  </label>
+                  <label>
+                    Upload media
+                    <input
+                      type="file"
+                      accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png"
+                      onChange={uploadMedia}
+                    />
+                  </label>
+                  {uploadMessage ? (
+                    <div className="upload-status" role="status">
+                      <progress max={100} value={uploadProgress} />
+                      <span>{uploadMessage}</span>
+                    </div>
+                  ) : null}
+                  <label>
+                    Direct media URL
+                    <input
+                      name="mediaUrl"
+                      type="url"
+                      required
+                      value={composePreview.mediaUrl}
+                      onChange={(event) =>
+                        setComposePreview((current) => ({
+                          ...current,
+                          mediaUrl: event.currentTarget.value,
+                        }))
+                      }
+                      placeholder="https://your-verified-domain.com/video.mp4"
+                    />
+                  </label>
+                  <label>
+                    YouTube thumbnail URL
+                    <input
+                      name="thumbnailUrl"
+                      type="url"
+                      placeholder="https://your-domain.com/thumbnail.jpg"
+                    />
+                  </label>
+                  <div className="form-grid">
+                    <label>
+                      Video title
+                      <input name="title" maxLength={100} placeholder="YouTube title" />
+                    </label>
+                    <label>
+                      Publish mode
+                      <select name="mode" defaultValue="draft">
+                        <option value="draft">Draft / private</option>
+                        <option value="direct">Direct publish</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="form-grid">
+                    <label>
+                      Media type
+                      <select name="mediaType" defaultValue="video">
+                        <option value="video">Video</option>
+                        <option value="image">Image</option>
+                      </select>
+                    </label>
+                    <label>
+                      Schedule
+                      <input name="scheduledAt" type="datetime-local" />
+                    </label>
+                  </div>
+                  <label>
+                    Privacy
+                    <select name="privacy" defaultValue="SELF_ONLY">
+                      <option value="SELF_ONLY">Private / self only</option>
+                      <option value="PUBLIC_TO_EVERYONE">Public</option>
+                      <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option>
+                    </select>
+                  </label>
+                  <div className="preview-grid" aria-label="Channel previews">
+                    {composePreview.targets.length ? (
+                      composePreview.targets.map((provider) => (
+                        <div className="channel-preview" key={provider}>
+                          <span className="section-kicker">{provider}</span>
+                          <strong>
+                            {composePreview.title ||
+                              composePreview.caption.slice(0, 60) ||
+                              "Untitled post"}
+                          </strong>
+                          <p>
+                            {composePreview.caption ||
+                              "Your caption preview will appear here."}
+                          </p>
+                          <small>
+                            {mediaHost(composePreview.mediaUrl)}
+                          </small>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="channel-preview muted-preview">
+                        Select a connected channel to preview its post.
+                      </div>
+                    )}
+                  </div>
+                  {connectedSocial.length === 0 ? (
+                    <div className="empty compact-empty">
+                      Connect at least one social account before publishing.
+                    </div>
+                  ) : null}
+                  <div className="form-actions">
+                    <span role="status">{publishMessage}</span>
+                    <button
+                      className="btn btn-primary"
+                      disabled={publishSubmitting || connectedSocial.length === 0}
+                    >
+                      {publishSubmitting ? "Submitting…" : "Publish"}
+                    </button>
+                  </div>
+                </form>
               </article>
               <article className="card">
                 <div className="card-heading">
                   <div><span className="section-kicker">Ops</span><h2>Run a query</h2></div>
                 </div>
-                <div className="empty">Query controls will use a separately scoped database connection.</div>
+                <form className="task-form" onSubmit={submitQuery}>
+                  {savedQueries.length ? (
+                    <label>
+                      Saved query
+                      <select
+                        defaultValue=""
+                        onChange={(event) => {
+                          const selected = savedQueries.find(
+                            (query) => query.id === event.currentTarget.value,
+                          );
+                          if (selected) setQueryDraft(selected.query);
+                        }}
+                      >
+                        <option value="">Choose a saved query</option>
+                        {savedQueries.map((query) => (
+                          <option value={query.id} key={query.id}>
+                            {query.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <label>
+                    Read-only SQL
+                    <textarea
+                      name="query"
+                      required
+                      value={queryDraft}
+                      onChange={(event) => setQueryDraft(event.currentTarget.value)}
+                      placeholder="select status, count(*) from tasks group by status"
+                    />
+                  </label>
+                  <div className="form-grid">
+                    <label>
+                      Saved name
+                      <input name="name" maxLength={80} placeholder="Optional query name" />
+                    </label>
+                    <label className="check-option save-option">
+                      <input type="checkbox" name="save" />
+                      Save this query
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <span role="status">{queryMessage}</span>
+                    <button className="btn btn-primary" disabled={querySubmitting}>
+                      {querySubmitting ? "Running…" : "Run query"}
+                    </button>
+                  </div>
+                  {queryResult ? (
+                    <pre className="query-result">{queryResult}</pre>
+                  ) : null}
+                </form>
               </article>
               <article className="card">
                 <div className="card-heading">
                   <div><span className="section-kicker">Deploy</span><h2>Trigger a build</h2></div>
                 </div>
-                <div className="empty">Deploy controls arrive once Vercel or Cloudflare is connected.</div>
+                <form className="task-form" onSubmit={submitDeploy}>
+                  <label>
+                    Provider
+                    <select name="provider" defaultValue="vercel">
+                      <option value="vercel">Vercel</option>
+                      <option value="cloudflare">Cloudflare</option>
+                    </select>
+                  </label>
+                  <label>
+                    Project key
+                    <input
+                      name="project"
+                      required
+                      placeholder="The key used in deploy hooks JSON"
+                    />
+                  </label>
+                  <div className="form-actions">
+                    <span role="status">{deployMessage}</span>
+                    <button className="btn btn-primary" disabled={deploySubmitting}>
+                      {deploySubmitting ? "Triggering…" : "Trigger build"}
+                    </button>
+                  </div>
+                </form>
               </article>
             </section>
           )}

@@ -25,10 +25,17 @@ Set these server-side variables in Vercel and Sites:
 - `SCURRY_SUPABASE_PUBLISHABLE_KEY`
 - `SCURRY_SUPABASE_SERVICE_ROLE_KEY` (secret)
 - `HQ_TIME_ZONE` (for example, `America/New_York`)
+- `HQ_TOKEN_ENCRYPTION_KEY` (secret, base64-encoded 32-byte key)
 
 Add the deployed Vercel `/auth/callback` URL to the Scurry Supabase Auth
 redirect allowlist. Vercel uses Supabase magic links; the private Sites target
 continues to accept its platform-provided ChatGPT identity.
+
+The full connection setup—TikTok, YouTube, Instagram, GitHub, Cloudflare,
+deployment hooks, scheduling, and the required Supabase migration—is documented
+in [`SETUP_CHECKLIST.md`](SETUP_CHECKLIST.md). Until a service is configured,
+the dashboard renders a truthful setup-required state and never substitutes
+sample metrics.
 
 This starter does not use `wrangler.jsonc`.
 

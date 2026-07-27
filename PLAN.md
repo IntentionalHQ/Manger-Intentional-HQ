@@ -56,7 +56,7 @@ surface, one design language (matching scurry / task-os), no fake data.
 - Actions: "Add task" → writes to scurry via a server action.
 - This proves the end-to-end shape before touching any social API.
 
-### 3 — Social, one at a time — in progress
+### 3 — Social, one at a time — implementation complete; activation pending
 Priority follows the channels that matter most to the brand:
 1. **TikTok** — primary short-form channel. Build OAuth, creator-info checks,
    Direct Post and draft flows through the Content Posting API, upload progress,
@@ -73,22 +73,25 @@ Priority follows the channels that matter most to the brand:
 For each: store token in the DB encrypted; expose a normalized `publish()`
 call and a `metrics()` call. UI never talks to the platform directly.
 
-### 4 — Sites & infra
-- GitHub App install: list repos, open PRs, latest workflow run per repo.
-- Vercel token: current project deployment status and recent history are
-  complete; expand to all projects when more sites are added.
-- Cloudflare token: Workers + Pages projects, health.
+The OAuth, encrypted token storage, metric reads, publishing adapters,
+publishing-status checks, unified composer, and scheduled-post runner are built.
+Activation requires the developer apps, approved scopes, redirect URLs, and
+environment secrets in `SETUP_CHECKLIST.md`.
 
-### 5 — Actions surface
-- **Compose**: one post, choose targets, per-channel preview, schedule.
-- **Query**: saved SQL against any connected Supabase.
-- **Deploy**: kick a Vercel/Cloudflare build.
+### 4 — Sites & infra — implementation complete; activation pending
+- GitHub App install: repository, open PR, and latest workflow monitoring built.
+- Vercel token: all-project discovery and recent deployment monitoring built.
+- Cloudflare token: Workers and Pages inventory and health monitoring built.
+
+### 5 — Actions surface — implementation complete; activation pending
+- **Compose**: one post, choose targets, draft/direct mode, and scheduling built.
+- **Query**: guarded read-only SQL against the connected Scurry Supabase built.
+- **Deploy**: protected Vercel/Cloudflare deploy-hook actions built.
 - **Capture**: add task to scurry from anywhere in HQ — complete.
 
-### 6 — Ambient signal (only after real data flows) — in progress
-- Activity feed now combines real Scurry task updates and connection sync
-  events with source filters. Add post and deployment events as those
-  integrations become live.
+### 6 — Ambient signal — implementation complete
+- Activity feed combines real Scurry task updates, connections, publishing,
+  query, scheduling, and deployment events with source filters.
 - No vanity metrics. Numbers only when they're queryable.
 
 ## Future: content studio (video editor)

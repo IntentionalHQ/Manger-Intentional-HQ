@@ -10,11 +10,19 @@ export type VercelDeployment = {
   commitMessage: string;
   createdAt: string;
   durationMs: number | null;
+  projectName: string;
+};
+
+export type VercelProject = {
+  id: string;
+  name: string;
+  updatedAt: string;
 };
 
 export type VercelSummary = {
   status: "connected" | "not_connected" | "error";
   projectId: string | null;
+  projects: VercelProject[];
   deployments: VercelDeployment[];
   successfulCount: number;
   failedCount: number;
@@ -39,6 +47,8 @@ type VercelApiDeployment = {
   buildingAt?: number;
   ready?: number;
   meta?: Record<string, string | undefined>;
+  name?: string;
+  projectId?: string;
 };
 
 async function vercelRequest<T>(
@@ -100,6 +110,7 @@ function normalizeDeployment(
       meta.githubCommitMessage ?? meta.gitCommitMessage ?? "Deployment",
     createdAt: deploymentTimestamp(deployment.created ?? deployment.createdAt),
     durationMs,
+    projectName: deployment.name ?? deployment.projectId ?? "Vercel project",
   };
 }
 
@@ -111,36 +122,48 @@ export async function readVercelSummary(): Promise<VercelSummary> {
     null;
   const lastCheckedAt = new Date().toISOString();
 
-  if (!token || !projectId) {
+  if (!token) {
     return {
       status: "not_connected",
       projectId,
+      projects: [],
       deployments: [],
       successfulCount: 0,
       failedCount: 0,
       lastCheckedAt,
-      error: !token
-        ? "Add HQ_VERCEL_TOKEN to enable deployment monitoring."
-        : "Vercel project identity is unavailable.",
+      error: "Add HQ_VERCEL_TOKEN to enable deployment monitoring.",
     };
   }
 
   try {
     const teamId = await resolveTeamId(token);
-    const query = new URLSearchParams({
-      projectId,
-      limit: "12",
-    });
-    if (teamId) query.set("teamId", teamId);
+    const query = new URLSearchParams({ limit: "50" });
+    const projectQuery = new URLSearchParams({ limit: "100" });
+    if (teamId) {
+      query.set("teamId", teamId);
+      projectQuery.set("teamId", teamId);
+    }
 
-    const payload = await vercelRequest<{
-      deployments?: VercelApiDeployment[];
-    }>(`/v6/deployments?${query.toString()}`, token);
+    const [payload, projectPayload] = await Promise.all([
+      vercelRequest<{ deployments?: VercelApiDeployment[] }>(
+        `/v6/deployments?${query.toString()}`,
+        token,
+      ),
+      vercelRequest<{
+        projects?: Array<{ id?: string; name?: string; updatedAt?: number }>;
+      }>(`/v9/projects?${projectQuery.toString()}`, token),
+    ]);
     const deployments = (payload.deployments ?? []).map(normalizeDeployment);
+    const projects = (projectPayload.projects ?? []).map((project) => ({
+      id: project.id ?? project.name ?? "unknown",
+      name: project.name ?? "Vercel project",
+      updatedAt: deploymentTimestamp(project.updatedAt),
+    }));
 
     return {
       status: "connected",
-      projectId,
+      projectId: projectId ?? projects[0]?.id ?? null,
+      projects,
       deployments,
       successfulCount: deployments.filter(
         (deployment) => deployment.status === "ready",
@@ -154,6 +177,7 @@ export async function readVercelSummary(): Promise<VercelSummary> {
     return {
       status: "error",
       projectId,
+      projects: [],
       deployments: [],
       successfulCount: 0,
       failedCount: 0,
