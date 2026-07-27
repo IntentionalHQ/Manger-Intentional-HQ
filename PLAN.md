@@ -67,10 +67,6 @@ Priority follows the channels that matter most to the brand:
 3. **Instagram** — secondary channel. Add Reels and feed publishing plus
    insights after TikTok and YouTube. Use the Instagram API for a professional
    account and complete Meta app review when production access requires it.
-4. **Threads** — later, if the Meta application work can be reused efficiently.
-5. **LinkedIn** — later, for personal and company updates when professional
-   distribution becomes a priority.
-6. **X** — only if the paid API tier is justified by measurable results.
 
 For each: store token in the DB encrypted; expose a normalized `publish()`
 call and a `metrics()` call. UI never talks to the platform directly.
