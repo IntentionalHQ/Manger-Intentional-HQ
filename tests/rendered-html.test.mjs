@@ -81,6 +81,7 @@ test("provides a Supabase magic-link flow for Vercel", async () => {
   assert.match(login, /Email me a sign-in link/);
   assert.match(magicLink, /signInWithOtp/);
   assert.match(magicLink, /emailRedirectTo/);
+  assert.match(magicLink, /if \(returnTo !== "\/"\)/);
   assert.match(callback, /exchangeCodeForSession/);
   assert.match(callback, /safeReturnPath/);
 });

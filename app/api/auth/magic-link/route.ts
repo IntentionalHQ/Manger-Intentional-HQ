@@ -17,7 +17,9 @@ export async function POST(request: Request) {
 
     const returnTo = safeReturnPath(payload.returnTo ?? "/");
     const callbackUrl = new URL("/auth/callback", request.url);
-    callbackUrl.searchParams.set("returnTo", returnTo);
+    if (returnTo !== "/") {
+      callbackUrl.searchParams.set("returnTo", returnTo);
+    }
 
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signInWithOtp({
