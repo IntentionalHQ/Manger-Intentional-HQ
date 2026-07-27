@@ -49,10 +49,14 @@ test("uses the backend-only Scurry connector for reads and task capture", async 
 });
 
 test("ships the five work surfaces without invented launch metrics", async () => {
-  const [dashboard, layout, og] = await Promise.all([
+  const [dashboard, layout, styles, og, logo, icon, appleIcon] = await Promise.all([
     readFile(projectFile("app/dashboard.tsx"), "utf8"),
     readFile(projectFile("app/layout.tsx"), "utf8"),
+    readFile(projectFile("app/globals.css"), "utf8"),
     stat(projectFile("public/og.png")),
+    stat(projectFile("public/scurry-logo.png")),
+    stat(projectFile("app/icon.png")),
+    stat(projectFile("app/apple-icon.png")),
   ]);
 
   for (const label of ["Overview", "Data", "Social", "Sites", "Actions"]) {
@@ -62,7 +66,12 @@ test("ships the five work surfaces without invented launch metrics", async () =>
   assert.match(dashboard, /Add to Scurry/);
   assert.doesNotMatch(dashboard, /Projected MRR|Waitlist/i);
   assert.match(layout, /Intentional HQ .* Management home base/);
+  assert.match(styles, /url\("\/scurry-logo\.png"\)/);
+  assert.doesNotMatch(dashboard, /className="brand-mark">H/);
   assert.ok(og.size > 100_000);
+  assert.ok(logo.size > 10_000);
+  assert.ok(icon.size > 10_000);
+  assert.ok(appleIcon.size > 10_000);
 });
 
 test("provides a Supabase magic-link flow for Vercel", async () => {

@@ -19,7 +19,7 @@ export default async function LoginPage({
   return (
     <main className="login-shell">
       <section className="login-card">
-        <span className="brand-mark">H</span>
+        <span className="brand-mark" aria-hidden="true" />
         <p className="eyebrow">Intentional HQ</p>
         <h1>Sign in to your home base</h1>
         <p className="subhead">

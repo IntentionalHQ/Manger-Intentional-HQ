@@ -21,7 +21,7 @@ export default async function UnauthorizedPage({
   return (
     <main className="login-shell">
       <section className="login-card">
-        <span className="brand-mark">H</span>
+        <span className="brand-mark" aria-hidden="true" />
         <p className="eyebrow">Intentional HQ</p>
         <h1>Owner access required</h1>
         <p className="subhead">

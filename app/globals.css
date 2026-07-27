@@ -95,13 +95,10 @@ button { background: none; border: 0; cursor: pointer; }
   letter-spacing: -0.01em;
 }
 .brand-mark {
-  width: 28px; height: 28px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--accent);
-  color: #2d2d2a;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 14px;
+  width: 32px; height: 32px;
+  display: inline-block;
+  flex: 0 0 32px;
+  background: url("/scurry-logo.png") center / contain no-repeat;
 }
 
 .primary-nav { display: flex; flex-direction: column; gap: 2px; }

@@ -199,7 +199,7 @@ export function Dashboard({
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">H</span>
+          <span className="brand-mark" aria-hidden="true" />
           <span>HQ</span>
         </div>
 
