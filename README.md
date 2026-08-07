@@ -19,7 +19,15 @@ npm run build
 
 ## Runtime configuration
 
-Set these server-side variables in Vercel and Sites:
+Set these server-side variables in Vercel and Sites for Intentional HQ's own
+Supabase project:
+
+- `HQ_SUPABASE_URL`
+- `HQ_SUPABASE_PUBLISHABLE_KEY`
+- `HQ_SUPABASE_SERVICE_ROLE_KEY` (secret)
+
+Keep the Scurry product project separate and configure it only as a reporting
+source:
 
 - `SCURRY_SUPABASE_URL`
 - `SCURRY_SUPABASE_PUBLISHABLE_KEY`
@@ -27,9 +35,21 @@ Set these server-side variables in Vercel and Sites:
 - `HQ_TIME_ZONE` (for example, `America/New_York`)
 - `HQ_TOKEN_ENCRYPTION_KEY` (secret, base64-encoded 32-byte key)
 
-Add the deployed Vercel `/auth/callback` URL to the Scurry Supabase Auth
-redirect allowlist. Vercel uses Supabase magic links; the private Sites target
+Add the deployed Vercel `/auth/callback` URL to the Intentional HQ Supabase Auth
+redirect allowlist. Vercel uses HQ Supabase magic links; the private Sites target
 continues to accept its platform-provided ChatGPT identity.
+
+Apply `supabase/hq_integrations.sql` and `supabase/hq_finance.sql` to the HQ
+project. The finance route renders a conspicuously labeled preview until these
+credentials and migrations are present; it never writes preview values to a
+database. Posted journal entries are immutable and corrections use reversals.
+
+The finance workspace includes double-entry transactions, a startup chart of
+accounts, receipt attachments, reversals, locked periods, profit-and-loss and
+balance-sheet views, trial-balance CSV exports, and the cost projection model
+ported from the original workbook. See
+[`docs/FINANCE_ARCHITECTURE.md`](docs/FINANCE_ARCHITECTURE.md) for the accounting
+controls and the commercial Scurry reporting boundary.
 
 The full connection setup—TikTok, YouTube, Instagram, GitHub, Cloudflare,
 deployment hooks, scheduling, and the required Supabase migration—is documented

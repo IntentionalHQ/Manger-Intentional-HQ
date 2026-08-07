@@ -200,3 +200,41 @@ test("shows owner metrics and read-only Vercel deployment monitoring", async () 
   assert.match(dashboard, /Latest Vercel deployment/);
   assert.match(dashboard, /Database health/);
 });
+
+test("keeps accounting in a separate HQ database and ships the finance surface", async () => {
+  const [financePage, financeUi, financeData, hqAdmin, env, migration, store, journal, reversal, close, receipts] = await Promise.all([
+    readFile(projectFile("app/finance/page.tsx"), "utf8"),
+    readFile(projectFile("app/finance/finance-dashboard.tsx"), "utf8"),
+    readFile(projectFile("app/finance/data.ts"), "utf8"),
+    readFile(projectFile("lib/supabase/hq-admin.ts"), "utf8"),
+    readFile(projectFile(".env.example"), "utf8"),
+    readFile(projectFile("supabase/hq_finance.sql"), "utf8"),
+    readFile(projectFile("app/integrations/store.ts"), "utf8"),
+    readFile(projectFile("app/api/finance/journal-entries/route.ts"), "utf8"),
+    readFile(projectFile("app/api/finance/journal-entries/[id]/reverse/route.ts"), "utf8"),
+    readFile(projectFile("app/api/finance/periods/close/route.ts"), "utf8"),
+    readFile(projectFile("app/api/finance/receipts/route.ts"), "utf8"),
+  ]);
+
+  assert.match(financePage, /requireHQOwner\("\/finance"\)/);
+  assert.match(financeUi, /Accounting/);
+  assert.match(financeUi, /Cost planning/);
+  assert.match(financeUi, /Actual vs forecast/);
+  assert.match(financeUi, /Lock previous month/);
+  assert.match(financeUi, /Receipt/);
+  assert.match(financeData, /isHQDatabaseConfigured/);
+  assert.match(hqAdmin, /HQ_SUPABASE_URL/);
+  assert.doesNotMatch(hqAdmin, /SCURRY_SUPABASE/);
+  assert.match(env, /HQ_SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(migration, /hq_journal_entries/);
+  assert.match(migration, /hq_block_posted_entry_mutation/);
+  assert.match(migration, /hq_block_closed_period_entry/);
+  assert.match(migration, /hq_reverse_journal_entry/);
+  assert.match(migration, /hq_forecast_scenarios/);
+  assert.match(store, /createHQAdminClient/);
+  assert.doesNotMatch(store, /SCURRY_SUPABASE_SERVICE_ROLE_KEY/);
+  for (const route of [journal, reversal, close, receipts]) assert.match(route, /getHQOwner/);
+  assert.match(journal, /validateJournalEntry/);
+  assert.match(receipts, /finance-documents/);
+  assert.match(receipts, /MAX_RECEIPT_BYTES/);
+});
