@@ -3,15 +3,41 @@
 The application code is complete. These are the external setup steps that
 cannot be performed safely without the owner of each account.
 
-## 1. Scurry Supabase
+## 1. Intentional HQ Supabase (new, separate project)
+
+- Create a new Supabase project for Intentional HQ. Do not reuse Scurry.
+- Add these values to Vercel and Sites:
+  - `HQ_SUPABASE_URL`
+  - `HQ_SUPABASE_PUBLISHABLE_KEY`
+  - `HQ_SUPABASE_SERVICE_ROLE_KEY` (secret)
+- Open the new HQ project's **SQL Editor**.
+- Run the complete contents of `supabase/hq_integrations.sql`.
+- Run the complete contents of `supabase/hq_finance.sql`.
+- Open **Storage** and create:
+  - a public bucket named `hq-media` for social publishing;
+  - a private bucket named `finance-documents` for receipts and records.
+- In the HQ project, enable email magic-link authentication and add the
+  deployed Vercel `/auth/callback` URL to the redirect allowlist.
+
+The finance page shows an explicit preview until this step is complete. Preview
+data is never written to Scurry or to the HQ database.
+
+## 2. Scurry Supabase (reporting source only)
 
 - Open the Scurry project in Supabase.
-- Open **SQL Editor**.
-- Run the complete contents of `supabase/hq_integrations.sql`.
-- Open **Storage** and create a public bucket named `hq-media`. Intentional HQ
-  uses signed upload URLs, while the public object URL lets social platforms
-  retrieve the finished media. Set `HQ_MEDIA_BUCKET` only if you choose a
-  different bucket name.
+- Keep `SCURRY_SUPABASE_URL`, `SCURRY_SUPABASE_PUBLISHABLE_KEY`, and the current
+  server-only `SCURRY_SUPABASE_SERVICE_ROLE_KEY` configured so the existing
+  dashboard can read Scurry while the restricted reporting endpoint is rolled
+  out.
+- Do not apply either HQ migration to Scurry.
+- Before a commercial launch, replace broad service-role reads with a narrowly
+  scoped reporting endpoint that exposes only the aggregates HQ needs.
+
+Back in the HQ project:
+
+- Set `HQ_MEDIA_BUCKET` only if you chose a different public media bucket name.
+- Set `HQ_FINANCE_DOCUMENTS_BUCKET` only if you chose a different private
+  finance-document bucket name.
 - Generate one 32-byte encryption key and save the same value in both Vercel
   and Sites as the secret `HQ_TOKEN_ENCRYPTION_KEY`.
 
@@ -28,7 +54,7 @@ PowerShell can generate the key:
   all social accounts are disconnected first; existing tokens would become
   unreadable.
 
-## 2. TikTok
+## 3. TikTok
 
 - Create an app at <https://developers.tiktok.com/>.
 - Add **Login Kit**, **Content Posting API**, and **Display API**.
@@ -46,7 +72,7 @@ PowerShell can generate the key:
 - Complete TikTok's audit when public Direct Post access is needed. Unaudited
   clients are limited to private visibility; draft upload can be used first.
 
-## 3. YouTube
+## 4. YouTube
 
 - In Google Cloud Console, enable **YouTube Data API v3**.
 - Configure the OAuth consent screen.
@@ -59,7 +85,7 @@ PowerShell can generate the key:
   published.
 - Complete Google's verification or YouTube API audit if Google requests it.
 
-## 4. Instagram
+## 5. Instagram
 
 - Create or reuse a Meta developer app at <https://developers.facebook.com/>.
 - Add **Instagram API with Instagram Login**.
@@ -76,7 +102,7 @@ PowerShell can generate the key:
   to the version shown in the app dashboard.
 - Complete Meta App Review before using permissions outside app-role accounts.
 
-## 5. GitHub
+## 6. GitHub
 
 - Create a GitHub App owned by `IntentionalHQ`.
 - Give it read access to:
@@ -92,7 +118,7 @@ PowerShell can generate the key:
 - Store the complete PEM private key. When the settings form is single-line,
   replace each real line break with `\n`.
 
-## 6. Vercel
+## 7. Vercel
 
 - Keep the existing `HQ_VERCEL_TOKEN`.
 - Ensure the token can read every project in the `intentional-hq` team.
@@ -107,7 +133,7 @@ PowerShell can generate the key:
 }
 ```
 
-## 7. Cloudflare
+## 8. Cloudflare
 
 - Create a scoped API token with:
   - Account → Workers Scripts → Read
@@ -124,16 +150,19 @@ PowerShell can generate the key:
 }
 ```
 
-## 8. Scheduling
+## 9. Scheduling
 
 - Configure a scheduler to send `POST /api/social/scheduled/run`.
 - Send `Authorization: Bearer <HQ_CRON_SECRET>`.
 - A ten-minute interval is a reasonable default.
 
-## 9. Activate and verify
+## 10. Activate and verify
 
 - Redeploy both Vercel and Sites after adding environment variables.
 - Sign in to Intentional HQ.
+- Open **Accounting & planning**, create the company workspace, post a small
+  test transaction with a receipt, confirm the trial balance is balanced, and
+  remove the test with a reversal rather than editing the posted entry.
 - Open **Social** and connect TikTok, then YouTube, then Instagram.
 - Confirm each channel displays only real account metrics.
 - Use draft/private publishing first.

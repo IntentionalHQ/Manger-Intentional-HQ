@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import type {
   Connection,
   ConnectionKind,
@@ -384,6 +385,11 @@ export function Dashboard({
               <span>{item.label}</span>
             </button>
           ))}
+          <p className="nav-label">Finance</p>
+          <Link className="nav-item" href="/finance">
+            <span className="nav-mark">$</span>
+            <span>Accounting & planning</span>
+          </Link>
         </nav>
 
         <div className="sidebar-footer">

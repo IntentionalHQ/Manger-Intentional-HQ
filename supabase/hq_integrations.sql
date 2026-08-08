@@ -1,3 +1,5 @@
+-- Apply this file to the Intentional HQ Supabase project, never Scurry.
+-- It stores HQ-owned OAuth tokens, activity, schedules, and saved queries.
 create extension if not exists pgcrypto;
 
 create table if not exists public.hq_connections (

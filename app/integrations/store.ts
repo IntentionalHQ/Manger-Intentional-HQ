@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createHQAdminClient, isHQDatabaseConfigured } from "@/lib/supabase/hq-admin";
 import { decryptSecret, encryptSecret } from "./crypto";
 import type {
   PublishRequest,
@@ -22,28 +22,10 @@ type ConnectionRow = {
   updated_at: string;
 };
 
-function adminClient(): SupabaseClient {
-  const url = (
-    process.env.SCURRY_SUPABASE_URL ??
-    process.env.NEXT_PUBLIC_SUPABASE_URL
-  )?.replace(/\/+$/, "");
-  const serviceRoleKey =
-    process.env.SCURRY_SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
-    throw new Error("Scurry Supabase is not configured.");
-  }
-  return createClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      persistSession: false,
-    },
-  });
-}
+const adminClient = createHQAdminClient;
 
 function missingTableMessage(): string {
-  return "Run supabase/hq_integrations.sql in the Scurry Supabase SQL editor.";
+  return "Run supabase/hq_integrations.sql in the Intentional HQ Supabase SQL editor.";
 }
 
 export async function readConnection(
@@ -148,6 +130,7 @@ export async function recordActivity(input: {
 }
 
 export async function readActivity(ownerEmail: string) {
+  if (!isHQDatabaseConfigured()) return [];
   const { data, error } = await adminClient()
     .from("hq_activity_events")
     .select("id,provider,kind,title,detail,external_id,created_at")
@@ -271,6 +254,7 @@ export async function saveQuery(
 }
 
 export async function readSavedQueries(ownerEmail: string) {
+  if (!isHQDatabaseConfigured()) return [];
   const { data, error } = await adminClient()
     .from("hq_saved_queries")
     .select("id,name,query_text,updated_at")
