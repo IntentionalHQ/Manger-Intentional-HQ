@@ -74,25 +74,24 @@ test("ships the five work surfaces without invented launch metrics", async () =>
   assert.ok(appleIcon.size > 10_000);
 });
 
-test("provides a Supabase magic-link flow for Vercel", async () => {
-  const [auth, loginPage, login, magicLink, callback] = await Promise.all([
+test("provides owner-restricted Supabase password sign-in for Vercel", async () => {
+  const [auth, loginPage, login, passwordRoute] = await Promise.all([
     readFile(projectFile("app/chatgpt-auth.ts"), "utf8"),
     readFile(projectFile("app/login/page.tsx"), "utf8"),
     readFile(projectFile("app/login/login-form.tsx"), "utf8"),
-    readFile(projectFile("app/api/auth/magic-link/route.ts"), "utf8"),
-    readFile(projectFile("app/auth/callback/route.ts"), "utf8"),
+    readFile(projectFile("app/api/auth/password/route.ts"), "utf8"),
   ]);
 
   assert.match(auth, /host\.endsWith\("\.vercel\.app"\)/);
   assert.match(auth, /redirect\(`\/login\?returnTo=/);
   assert.match(loginPage, /authConfigured/);
   assert.match(login, /Connect Supabase in Vercel/);
-  assert.match(login, /Email me a sign-in link/);
-  assert.match(magicLink, /signInWithOtp/);
-  assert.match(magicLink, /emailRedirectTo/);
-  assert.match(magicLink, /if \(returnTo !== "\/"\)/);
-  assert.match(callback, /exchangeCodeForSession/);
-  assert.match(callback, /safeReturnPath/);
+  assert.match(login, /current-password/);
+  assert.match(login, /api\/auth\/password/);
+  assert.doesNotMatch(login, /magic link/i);
+  assert.match(passwordRoute, /HQ_OWNER_EMAIL/);
+  assert.match(passwordRoute, /signInWithPassword/);
+  assert.match(passwordRoute, /safeReturnPath/);
 });
 
 test("limits the social roadmap to TikTok, YouTube, and Instagram", async () => {

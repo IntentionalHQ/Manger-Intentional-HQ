@@ -19,24 +19,30 @@ export function LoginForm({
     setSubmitting(true);
     setMessage("");
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/auth/magic-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: form.get("email"),
-        returnTo,
-      }),
-    });
-    const payload = (await response.json()) as {
-      error?: string;
-      message?: string;
-    };
-    setSubmitting(false);
-    setMessage(
-      response.ok
-        ? payload.message ?? "Check your email."
-        : payload.error ?? "The sign-in link could not be sent.",
-    );
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.get("email"),
+          password: form.get("password"),
+          returnTo,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        redirectTo?: string;
+      };
+      if (response.ok) {
+        window.location.assign(payload.redirectTo ?? returnTo);
+        return;
+      }
+      setMessage(payload.error ?? "Sign-in failed.");
+    } catch {
+      setMessage("Could not reach the sign-in service. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!configured) {
@@ -44,10 +50,10 @@ export function LoginForm({
       <div className="login-setup" role="status">
         <strong>Connect Supabase in Vercel</strong>
         <p>
-          Add <code>SCURRY_SUPABASE_URL</code>,{" "}
-          <code>SCURRY_SUPABASE_PUBLISHABLE_KEY</code>, and{" "}
-          <code>SCURRY_SUPABASE_SERVICE_ROLE_KEY</code> to the Production
-          environment, then redeploy.
+          Add <code>HQ_SUPABASE_URL</code>,{" "}
+          <code>HQ_SUPABASE_PUBLISHABLE_KEY</code>, and{" "}
+          <code>HQ_OWNER_EMAIL</code> to the Production environment, then
+          redeploy.
         </p>
       </div>
     );
@@ -65,9 +71,24 @@ export function LoginForm({
           required
         />
       </label>
+      <label>
+        Password
+        <input
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          minLength={8}
+          maxLength={128}
+          required
+        />
+      </label>
       <button className="btn btn-primary" type="submit" disabled={submitting}>
-        {submitting ? "Sending…" : "Email me a sign-in link"}
+        {submitting ? "Signing in…" : "Sign in"}
       </button>
+      <p className="login-help">
+        First time? Create the owner account once in Supabase Authentication →
+        Users.
+      </p>
       {message ? <p className="login-message" role="status">{message}</p> : null}
     </form>
   );

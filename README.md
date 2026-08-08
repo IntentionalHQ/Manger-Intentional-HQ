@@ -25,6 +25,7 @@ Supabase project:
 - `HQ_SUPABASE_URL`
 - `HQ_SUPABASE_PUBLISHABLE_KEY`
 - `HQ_SUPABASE_SERVICE_ROLE_KEY` (secret)
+- `HQ_OWNER_EMAIL`
 
 Keep the Scurry product project separate and configure it only as a reporting
 source:
@@ -35,9 +36,10 @@ source:
 - `HQ_TIME_ZONE` (for example, `America/New_York`)
 - `HQ_TOKEN_ENCRYPTION_KEY` (secret, base64-encoded 32-byte key)
 
-Add the deployed Vercel `/auth/callback` URL to the Intentional HQ Supabase Auth
-redirect allowlist. Vercel uses HQ Supabase magic links; the private Sites target
-continues to accept its platform-provided ChatGPT identity.
+Create the owner once in Supabase Authentication → Users with a confirmed email
+and password. Vercel then uses that password login without sending a magic-link
+email; the private Sites target continues to accept its platform-provided
+ChatGPT identity.
 
 Apply `supabase/hq_integrations.sql` and `supabase/hq_finance.sql` to the HQ
 project. The finance route renders a conspicuously labeled preview until these

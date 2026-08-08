@@ -10,14 +10,16 @@ cannot be performed safely without the owner of each account.
   - `HQ_SUPABASE_URL`
   - `HQ_SUPABASE_PUBLISHABLE_KEY`
   - `HQ_SUPABASE_SERVICE_ROLE_KEY` (secret)
+  - `HQ_OWNER_EMAIL`
 - Open the new HQ project's **SQL Editor**.
 - Run the complete contents of `supabase/hq_integrations.sql`.
 - Run the complete contents of `supabase/hq_finance.sql`.
 - Open **Storage** and create:
   - a public bucket named `hq-media` for social publishing;
   - a private bucket named `finance-documents` for receipts and records.
-- In the HQ project, enable email magic-link authentication and add the
-  deployed Vercel `/auth/callback` URL to the redirect allowlist.
+- Open **Authentication → Users**, create the `HQ_OWNER_EMAIL` user with a
+  strong password, and mark the email as confirmed. This is a one-time action;
+  normal sign-ins do not send email.
 
 The finance page shows an explicit preview until this step is complete. Preview
 data is never written to Scurry or to the HQ database.

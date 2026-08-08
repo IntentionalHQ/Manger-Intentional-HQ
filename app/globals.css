@@ -646,6 +646,12 @@ h3 { font-size: 13px; font-weight: 600; }
   color: var(--text-secondary);
   font-size: 12px;
 }
+.login-help {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
+}
 .login-setup {
   display: flex;
   flex-direction: column;

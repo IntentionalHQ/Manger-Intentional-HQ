@@ -24,7 +24,7 @@ export default async function LoginPage({
         <h1>Sign in to your home base</h1>
         <p className="subhead">
           {authConfigured
-            ? "Use the same email as Scurry. We will send you a secure magic link."
+            ? "Use your Intentional HQ owner email and password."
             : "The deployment is online. Authentication needs one final setup step."}
         </p>
         <LoginForm
